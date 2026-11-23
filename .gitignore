@@ -1,0 +1,27 @@
+.venv*/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+generated_dataset/
+prepared_dataset/
+runs/*.pt
+runs/*.pth
+runs/*.onnx
+runs/history.json
+runs/splits.json
+runs/dataset_report.json
+runs/evaluation.json
+
+.env
+
+# Local application state and generated artifacts
+*.db
+*.sqlite
+*.sqlite3
+generated_models/*.glb
+generated_models/*.stl
+generated_models/*.obj
+.mypy_cache/
+.pyright/
+__pycache__/
+

@@ -1,0 +1,15 @@
+generator_version: 4.0.0
+units: mm
+families: [classic, v_shaped, split, y_shaped, mesh]
+finishes: [solid_silver, solid_black, diamond_cut]
+spoke_count_meaning: visible_outer_tips
+source_ranges:
+  outer_diameter_mm: [330, 460]
+  center_hole_diameter_mm: [50, 74]
+  bulge_depth_mm: [8, 28]
+  face_thickness_mm: [5, 11]
+  rim_depth_mm: [90, 170]
+  spoke_count: [5, 24]
+split_policy: model_id
+recommended_models: 10000
+recommended_renders_per_model: 2

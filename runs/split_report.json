@@ -1,0 +1,14 @@
+{
+  "train": {
+    "images": 2020,
+    "models": 1010
+  },
+  "validation": {
+    "images": 430,
+    "models": 215
+  },
+  "test": {
+    "images": 430,
+    "models": 215
+  }
+}

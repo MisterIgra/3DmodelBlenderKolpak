@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>АвтоКолпак — Инженеры будущего 2098</title>
+    <meta name="ui-version" content="2.1-local">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="/vendor/tailwind.js"></script>
+    <script>
+        const sc = (p, ks) => Object.fromEntries(ks.map(k => [k, `rgb(var(--${p}-${k}) / <alpha-value>)`]));
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: {
+            slate: sc('s', [50,100,200,300,400,500,600,700,800,900,950]),
+            blue: sc('a', [400,500,600,700]),
+            emerald: sc('e', [400,500,600])
+        } } } };
+    </script>
+    <script>
+        const K = [50,100,200,300,400,500,600,700,800,900,950];
+        const DARK = ['248 250 252','241 245 249','226 232 240','203 213 225','148 163 184','100 116 139','71 85 105','51 65 85','30 41 55','15 23 42','9 13 22'];
+        const THEMES = {
+            neon:    { n: 'Неон',     l: 0, a: ['96 165 250','59 130 246','37 99 235','29 78 216'],   e: ['52 211 153','16 185 129','5 150 105'] },
+            emerald: { n: 'Изумруд',  l: 0, a: ['52 211 153','16 185 129','5 150 105','4 120 87'],    e: ['45 212 191','20 184 166','13 148 136'] },
+            violet:  { n: 'Аметист',  l: 0, a: ['167 139 250','139 92 246','124 58 237','109 40 217'], e: ['244 114 182','236 72 153','219 39 119'] },
+            sunset:  { n: 'Закат',    l: 0, a: ['251 191 36','245 158 11','217 119 6','180 83 9'],     e: ['251 113 133','244 63 94','225 29 72'] },
+            light:   { n: 'Светлая',  l: 1, a: ['37 99 235','59 130 246','37 99 235','29 78 216'],     e: ['5 150 105','16 185 129','5 150 105'] }
+        };
+        let curTheme = 'neon';
+        const PK = 'ak_profile';
+        const getP = () => { try { return JSON.parse(localStorage.getItem(PK)); } catch (e) { return null; } };
+        const setP = p => { try { p ? localStorage.setItem(PK, JSON.stringify(p)) : localStorage.removeItem(PK); } catch (e) {} };
+        function applyTheme(id) {
+            const t = THEMES[id] || THEMES.neon; curTheme = THEMES[id] ? id : 'neon';
+            const st = document.documentElement.style, sl = t.l ? [...DARK].reverse() : DARK;
+            K.forEach((k, i) => st.setProperty('--s-' + k, sl[i]));
+            [400,500,600,700].forEach((k, i) => st.setProperty('--a-' + k, t.a[i]));
+            [400,500,600].forEach((k, i) => st.setProperty('--e-' + k, t.e[i]));
+            if (typeof scene !== 'undefined' && scene) scene.background = new THREE.Color(t.l ? 0xe2e8f0 : 0x0f172a);
+            document.querySelectorAll('.theme-card').forEach(c => c.classList.toggle('sel', c.dataset.t === id));
+        }
+        applyTheme((getP() || {}).theme);
+    </script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+
+    <!-- Three.js and Exporters -->
+    <script src="/vendor/three.min.js"></script>
+    <script src="/vendor/GLTFLoader.js"></script>
+    <script src="/vendor/OrbitControls.js"></script>
+    <script src="/vendor/STLExporter.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgb(var(--s-950)); }
+        ::-webkit-scrollbar-thumb { background: rgb(var(--s-800)); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgb(var(--s-700)); }
+                canvas { touch-action: none; display: block; width: 100%; height: 100%; }
+        .ak-panel { background: linear-gradient(180deg, rgb(var(--s-900) / .96), rgb(var(--s-950) / .96)); }
+
+        .ak-swatch { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgb(var(--s-700)); box-shadow: inset 0 0 0 2px rgb(var(--s-950)); }
+        .ak-design-card { transition: border-color .2s, transform .2s, background .2s; }
+        .ak-design-card:hover { transform: translateY(-2px); border-color: rgb(var(--a-500) / .7); }
+        .ak-design-card.active { border-color: rgb(var(--a-400)); background: rgb(var(--a-500) / .12); }
+        .ak-design-preview { background: radial-gradient(circle at 50% 45%, rgb(var(--s-700)), rgb(var(--s-950) 72%)); }
+        .animate-spin-slow { animation: spin 8s linear infinite; }
+
+        /* Стартовый экран */
+        @keyframes drift { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(50px,-60px) scale(1.2); } }
+        @keyframes up { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+        @keyframes bar { from { width: 0; } to { width: 100%; } }
+        @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+        @keyframes ring { 0% { transform: scale(.9); opacity: .7; } 100% { transform: scale(1.6); opacity: 0; } }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        #welcome { transition: opacity .7s, transform .7s, filter .7s; }
+        #welcome.leaving { opacity: 0; transform: scale(1.06); filter: blur(10px); pointer-events: none; }
+        #welcome input { user-select: text; -webkit-user-select: text; }
+        .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .35; animation: drift 14s ease-in-out infinite; }
+        .grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgb(var(--a-500)/.08) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--a-500)/.08) 1px, transparent 1px); background-size: 44px 44px; -webkit-mask-image: radial-gradient(circle at 50% 40%, #000, transparent 70%); mask-image: radial-gradient(circle at 50% 40%, #000, transparent 70%); }
+        .up { animation: up .8s cubic-bezier(.2,.8,.2,1) both; }
+        .step-in { animation: up .5s cubic-bezier(.2,.8,.2,1) both; }
+        .shake { animation: shake .4s; }
+        .spin-s { animation: spin 20s linear infinite; }
+        .hero { animation: float 6s ease-in-out infinite; }
+        .inp { width: 100%; background: rgb(var(--s-950)); border: 1px solid rgb(var(--s-800)); border-radius: .75rem; padding: .75rem 1rem; font-size: .875rem; color: rgb(var(--s-100)); outline: 0; transition: .2s; }
+        .inp:focus { border-color: rgb(var(--a-500)); box-shadow: 0 0 0 3px rgb(var(--a-500)/.2); }
+        .btn-main { width: 100%; padding: .8rem; border-radius: .75rem; font-weight: 600; font-size: .875rem; color: #fff; background: linear-gradient(90deg, rgb(var(--a-600)), rgb(var(--e-500))); box-shadow: 0 10px 25px -8px rgb(var(--a-500)/.6); transition: transform .2s, filter .2s; }
+        .btn-main:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-sec { flex: 1; padding: .6rem; border-radius: .75rem; font-size: .75rem; color: rgb(var(--s-300)); border: 1px solid rgb(var(--s-800)); transition: .2s; }
+        .btn-sec:hover { border-color: rgb(var(--a-500)); color: rgb(var(--s-100)); }
+        .theme-card { transition: transform .25s, border-color .25s, box-shadow .25s; }
+        .theme-card:hover { transform: translateY(-4px) scale(1.03); }
+        .theme-card.sel { border-color: rgb(var(--a-500)); box-shadow: 0 0 0 2px rgb(var(--a-500)/.4), 0 10px 30px -8px rgb(var(--a-500)/.5); }
+        @media (prefers-reduced-motion: reduce) { #welcome *, .orb { animation-duration: .01s !important; } }
+        .workspace-nav { display:flex; align-items:center; gap:.25rem; padding:.25rem; border:1px solid rgb(var(--s-800)); border-radius:.75rem; background:rgb(var(--s-950)); }
+        .workspace-nav button { display:flex; align-items:center; gap:.5rem; padding:.55rem .85rem; border-radius:.5rem; white-space:nowrap; font-size:.75rem; font-weight:600; color:rgb(var(--s-400)); transition:background .18s,color .18s; }
+        .workspace-nav button:hover { color:rgb(var(--s-100)); background:rgb(var(--s-800)/.65); }
+        .workspace-nav button.active { color:white; background:rgb(var(--a-600)); }
+        @media(max-width:1050px) { .header-brand-caption { display:none; } .hubcap-tabs-label { display:none; } }
+        @media(max-width:760px) { .app-header { flex-wrap:wrap; gap:.6rem; padding:.6rem .75rem; } .workspace-nav { order:3; width:100%; } .workspace-nav button { flex:1; justify-content:center; } .hubcap-tabs { order:4; width:100%; } .hubcap-tabs button { flex:1; padding-left:.35rem; padding-right:.35rem; font-size:10px; } .app-header-actions { margin-left:auto; gap:.4rem; } .app-version { display:none; } }
+        #metiz-subnav { display:flex; gap:.35rem; flex-wrap:wrap; margin-bottom:1.25rem; border-bottom:1px solid rgb(var(--s-800)); padding-bottom:.75rem; }
+        #metiz-subnav.hidden { display:none; }
+        #metiz-subnav button { padding:.5rem .8rem; border:1px solid transparent; border-radius:.375rem; font-size:.75rem; color:rgb(var(--s-400)); transition:background .18s,color .18s; }
+        #metiz-subnav button:hover { background:rgb(var(--s-900)); color:rgb(var(--s-100)); }
+        #metiz-subnav button.active { color:rgb(var(--e-400)); background:rgb(var(--e-500)/.1); border-color:rgb(var(--e-500)/.35); }
+        #metiz-workspace { min-height:0; }
+        .metiz-layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr); gap:1.5rem; align-items:start; }
+        .metiz-preview { position:sticky; top:0; min-width:0; }
+        #metiz-viewer { height:min(56vh,480px); min-height:300px; border:1px solid rgb(var(--s-800)); background:#0b1220; }
+        #metiz-viewer canvas { cursor:grab; }
+        #metiz-viewer canvas:active { cursor:grabbing; }
+        @media(max-width:900px) { .metiz-layout { grid-template-columns:1fr; } .metiz-preview { position:relative; } #metiz-viewer { height:360px; } }
+
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- Start screen -->
+    <div id="welcome" class="fixed inset-0 z-[100] overflow-y-auto bg-slate-950">
+        <div class="orb bg-blue-600 w-96 h-96 -top-24 -left-24"></div>
+        <div class="orb bg-emerald-500 w-80 h-80 bottom-0 right-0" style="animation-delay:-5s"></div>
+        <div class="orb bg-indigo-500 w-72 h-72 top-1/3 left-1/2" style="animation-delay:-9s"></div>
+        <div class="grid-bg"></div>
+        <!-- Копирайтинг / Авторы внизу стартового экрана -->
+        <div class="relative text-center pb-6 text-xs text-slate-500">
+            Школа 2098, Сидоров, Соменко, Степанян
+        </div>
+        <div class="relative min-h-full max-w-6xl mx-auto px-6 py-10 grid lg:grid-cols-2 gap-10 items-center">
+            <div class="text-center lg:text-left">
+                <svg viewBox="-100 -100 200 200" class="hero w-52 h-52 sm:w-64 sm:h-64 mx-auto lg:mx-0" style="filter:drop-shadow(0 0 30px rgb(var(--a-500)/.5))">
+                    <g class="spin-s" style="animation-duration:24s"><circle r="94" style="fill:none;stroke:rgb(var(--a-500));stroke-width:1.5;stroke-dasharray:3 9"/></g>
+                    <g class="spin-s" style="animation-duration:14s;animation-direction:reverse"><circle r="82" style="fill:none;stroke:rgb(var(--e-400));stroke-width:2;stroke-dasharray:40 20 6 20"/></g>
+                    <g id="hero-spokes" class="spin-s" style="animation-duration:30s"></g>
+                    <circle r="24" style="fill:rgb(var(--s-900));stroke:rgb(var(--a-400));stroke-width:3"/>
+                    <circle r="8" style="fill:rgb(var(--e-400))"/>
+                </svg>
+                <h1 class="up mt-6 text-5xl sm:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-slate-100 via-blue-400 to-emerald-400 bg-clip-text text-transparent" style="animation-delay:.1s">АвтоКолпак</h1>
+                <p class="up mt-3 text-slate-400 max-w-md mx-auto lg:mx-0" style="animation-delay:.25s">Параметрический САПР и слайсер колпаков с ИИ-сканером по фото. Инженеры будущего 2098.</p>
+                <div class="up mt-5 flex flex-wrap gap-2 justify-center lg:justify-start text-[11px] text-slate-300" style="animation-delay:.4s">
+                    <span class="px-3 py-1 rounded-full border border-slate-800 bg-slate-900/60"><i class="fa-solid fa-cube text-blue-400 mr-1"></i>3D-редактор</span>
+                    <span class="px-3 py-1 rounded-full border border-slate-800 bg-slate-900/60"><i class="fa-solid fa-wand-magic-sparkles text-emerald-400 mr-1"></i>AI-скан по фото</span>
+                    <span class="px-3 py-1 rounded-full border border-slate-800 bg-slate-900/60"><i class="fa-solid fa-download text-blue-400 mr-1"></i>Экспорт STL</span>
+                </div>
+            </div>
+
+            <div class="up relative w-full max-w-md mx-auto rounded-3xl border border-slate-800 bg-slate-900/70 backdrop-blur-xl p-7 shadow-2xl" style="animation-delay:.2s">
+                <div id="ws-0" class="wstep hidden text-center">
+                    <div class="relative w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-400 flex items-center justify-center text-2xl text-white">
+                        <span class="absolute inset-0 rounded-full bg-blue-500/40" style="animation:ring 2s ease-out infinite"></span><i class="fa-solid fa-user relative"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-100">С возвращением, <span id="wb-name"></span>!</h2>
+                    <p class="text-xs text-slate-400 mt-1 mb-5">Демо-профиль найден в этом браузере</p>
+                    <button onclick="continueSaved()" class="btn-main">Продолжить</button>
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="draft=getP();goStep(2)" class="btn-sec">Сменить тему</button>
+                        <button onclick="setP(null);goStep(1)" class="btn-sec">Другой аккаунт</button>
+                    </div>
+                </div>
+
+                <div id="ws-1" class="wstep">
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-xl font-bold text-slate-100">Регистрация</h2>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">ДЕМО</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-5">Создайте демо-аккаунт, чтобы начать работу</p>
+                    <form onsubmit="event.preventDefault();doRegister()" class="space-y-3" autocomplete="off">
+                        <input id="reg-name" class="inp" placeholder="Имя" maxlength="30">
+                        <input id="reg-mail" type="email" class="inp" placeholder="Email">
+                        <input id="reg-pass" type="password" class="inp" placeholder="Пароль (мин. 6 символов)">
+                        <p id="reg-err" class="text-xs text-red-400 min-h-[1rem]"></p>
+                        <button class="btn-main">Создать аккаунт →</button>
+                    </form>
+                    <button onclick="draft={name:'Гость',email:''};goStep(2)" class="w-full mt-3 text-xs text-slate-400 hover:text-slate-100 transition-all">Продолжить как гость</button>
+                    <p class="text-[10px] text-slate-500 mt-4 leading-relaxed">Демо-режим: имя и email хранятся только в вашем браузере. Пароль нигде не сохраняется и никуда не отправляется.</p>
+                </div>
+
+                <div id="ws-2" class="wstep hidden">
+                    <h2 class="text-xl font-bold text-slate-100">Выберите тему</h2>
+                    <p class="text-xs text-slate-400 mb-4">Применяется сразу, сменить можно в любой момент</p>
+                    <div id="theme-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5"></div>
+                    <button onclick="finishTheme()" class="btn-main">Запустить САПР</button>
+                </div>
+
+                <div id="ws-3" class="wstep hidden text-center py-6">
+                    <div class="w-14 h-14 mx-auto mb-4 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p id="launch-msg" class="text-sm text-slate-200 mb-4">Загрузка 3D-движка…</p>
+                    <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style="animation:bar 1.9s ease-in-out both"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <header class="app-header bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between gap-4 z-20 shrink-0 shadow-md">
+        <div class="flex items-center space-x-3 shrink-0">
+            <div class="bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-400 p-2 rounded-lg shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-dharmachakra text-white text-lg animate-spin-slow"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base tracking-tight text-slate-100">АвтоКолпак</h1>
+                <p class="header-brand-caption text-[10px] text-slate-500">3D-конструктор деталей по фото</p>
+            </div>
+        </div>
+
+        <nav class="workspace-nav" aria-label="Разделы конструктора">
+            <button onclick="switchWorkspace('hubcaps')" id="workspace-btn-hubcaps" class="active" aria-current="page"><i class="fa-solid fa-circle-notch"></i>Колпаки</button>
+            <button onclick="switchWorkspace('fasteners')" id="workspace-btn-fasteners"><i class="fa-solid fa-screwdriver-wrench"></i>Другие изделия</button>
+        </nav>
+        <div id="hubcap-tabs" class="hubcap-tabs flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <button onclick="switchTab(1)" id="tab-btn-1" class="px-3 py-1.5 rounded-md text-xs font-medium transition-all bg-blue-600 text-white shadow">
+                <i class="fa-solid fa-cube mr-1.5"></i><span class="hubcap-tabs-label">Модель 3D</span><span class="hubcap-tabs-label"> · </span>STL/OBJ
+            </button>
+            <button onclick="switchTab(2)" id="tab-btn-2" class="px-3 py-1.5 rounded-md text-xs font-medium transition-all text-slate-400 hover:text-slate-100">
+                <i class="fa-solid fa-camera mr-1.5"></i>По фото
+            </button>
+        </div>
+
+        <div class="app-header-actions flex items-center space-x-3 shrink-0">
+            <span class="app-version text-xs font-mono text-slate-400 bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/80 flex items-center"><i class="fa-solid fa-cube text-emerald-400 mr-2"></i>3D CAD v3.9</span>
+            <button onclick="cycleTheme()" title="Сменить тему" aria-label="Сменить тему" class="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all"><i class="fa-solid fa-palette"></i></button>
+            <span class="text-xs text-slate-200 bg-slate-800/80 pl-1.5 pr-3 py-1 rounded-lg border border-slate-700/80 flex items-center">
+                <span id="user-ava" class="w-6 h-6 mr-2 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-400 text-white font-bold flex items-center justify-center">?</span><span id="user-name">—</span>
+            </span>
+            <button onclick="logout()" title="Выйти" aria-label="Выйти" class="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+        
+        <!-- LEFT SIDEBAR: Controls & Presets -->
+        <aside class="lg:col-span-4 bg-slate-900/90 backdrop-blur border-r border-slate-800 flex flex-col h-full overflow-y-auto z-10">
+            
+            <!-- TAB 2: UPLOAD STL/OBJ -->
+            <div id="tab-content-1" class="p-5 space-y-4">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Импорт 3D моделей</h2>
+                <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-6 text-center bg-slate-950/40 transition-all cursor-pointer">
+                    <input type="file" id="file-input" accept=".stl" class="hidden" onchange="handleFileUpload(event)">
+                    <div class="w-12 h-12 bg-blue-600/10 text-blue-400 rounded-xl mx-auto flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-file-arrow-up text-xl"></i>
+                    </div>
+                    <p class="text-xs font-medium text-slate-200 mb-1">Перетащите STL файл сюда</p>
+                    <p class="text-[10px] text-slate-400 mb-3">или нажмите кнопкой ниже</p>
+                    <button onclick="document.getElementById('file-input').click()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-all">
+                        Выбрать STL файл
+                    </button>
+                </div>
+                <div id="upload-status" class="text-xs text-slate-400 hidden p-3 bg-slate-950 rounded-xl border border-slate-800"></div>
+            </div>
+
+            <!-- TAB 3: AI SCANNER -->
+            <div id="tab-content-2" class="p-5 space-y-4 hidden">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">AI-сканер геометрии</h2>
+                <p id="ai-status" class="text-[11px] text-slate-400">Проверка состояния модели…</p>
+                <div class="space-y-1">
+                    <label for="ref-diam" class="text-[11px] text-slate-400">Наружный диаметр диска, мм (330–460) — нужен, чтобы получить размеры в мм</label>
+                    <input id="ref-diam" type="number" min="330" max="460" step="1" placeholder="например, 380"
+                           onchange="if (lastScanFile) runScan(lastScanFile)"
+                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="border-2 border-dashed border-slate-700 rounded-2xl p-6 text-center bg-slate-950/40">
+                    <input type="file" id="scanner-input" accept="image/*" class="hidden" onchange="handleImageScan(event)">
+                    <img id="scan-img" alt="Загруженное фото" class="hidden w-full max-h-56 object-contain rounded-xl mb-4 border border-slate-800">
+                    <div id="scanner-preview-box">
+                        <div class="w-12 h-12 bg-emerald-600/10 text-emerald-400 rounded-xl mx-auto flex items-center justify-center mb-3">
+                            <i class="fa-solid fa-camera text-xl"></i>
+                        </div>
+                        <p class="text-xs font-medium text-slate-200 mb-1">Загрузите фото колесного диска</p>
+                        <p class="text-[10px] text-slate-400 mb-3">ИИ оценит тип, число спиц и размеры по одному фото</p>
+                        <button onclick="document.getElementById('scanner-input').click()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition-all">
+                            Загрузить фото
+                        </button>
+                    </div>
+                    <div id="scanner-loading" class="hidden py-6">
+                        <div class="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                        <p class="text-xs text-emerald-400 font-mono" id="scanner-log">[AI] Распознавание геометрии...</p>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-800 mx-5 my-1">
+
+            <!-- PARAMETRIC EDITOR SLIDERS -->
+            <div class="p-5 space-y-4 flex-1">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span>Конфигуратор колпака</span>
+                    <i class="fa-solid fa-sliders text-blue-500"></i>
+                </h2>
+                
+                <!-- Wheel Design -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Дизайн колпака</span>
+                        <span id="val-design" class="font-mono text-blue-400 font-semibold">Классик</span>
+                    </div>
+                    <select id="param-design" onchange="setWheelDesign(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="classic">Классик</option>
+                        <option value="split">Split 10</option>
+                        <option value="y-spoke">Y-Spoke</option>
+                        <option value="vortex">Vortex</option>
+                        <option value="mesh">Mesh</option>
+                        <option value="cross">Cross 5</option>
+                        <option value="twin">Twin 6</option>
+                        <option value="petal">Petal</option>
+                        <option value="aero">Aero</option>
+                        <option value="rally">Rally</option>
+                    </select>
+                </div>
+                <div class="mt-5 border-t border-slate-800 pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <span>Библиотека колпаков</span>
+                        <select id="design-filter" onchange="filterDesignCatalog(this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[10px] text-slate-300">
+                            <option value="all">Все стили</option><option value="sport">Спорт</option><option value="classic">Классика</option><option value="tech">Техно</option>
+                        </select>
+                    </div>
+                    <div id="design-catalog" class="grid grid-cols-2 gap-2"></div>
+                </div>
+                <!-- Radius -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Радиус диска</span>
+                        <span id="val-radius" class="font-mono text-blue-400 font-semibold">R15</span>
+                    </div>
+                    <select id="param-radius" onchange="updateParameters()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="13">R13 (Бюджет)</option>
+                        <option value="14">R14 (Lada Granta)</option>
+                        <option value="15" selected>R15 (Vesta / Rio)</option>
+                        <option value="16">R16 (SUV / Crossover)</option>
+                        <option value="17">R17 (Sport / Tuning)</option>
+                    </select>
+                </div>
+
+                <!-- Center Hole Bore -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Центральное отверстие (ЦО)</span>
+                        <span id="val-bore" class="font-mono text-blue-400 font-semibold">54 мм</span>
+                    </div>
+                    <input type="range" id="param-bore" min="30" max="80" step="1" value="54" oninput="updateParameters()" class="w-full accent-blue-500 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Spokes -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Количество спиц</span>
+                        <span id="val-spokes" class="font-mono text-blue-400 font-semibold">7 шт</span>
+                    </div>
+                    <input type="range" id="param-spokes" min="5" max="24" step="1" value="7" oninput="updateParameters()" class="w-full accent-blue-500 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <!-- Dish Convex Depth -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-400">Выпуклость (Вылет)</span>
+                        <span id="val-depth" class="font-mono text-blue-400 font-semibold">25 мм</span>
+                    </div>
+                    <input type="range" id="param-depth" min="10" max="50" step="1" value="25" oninput="updateParameters()" class="w-full accent-blue-500 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                </div>
+
+                <div class="mt-5 border-t border-slate-800 pt-4 space-y-3">
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Посадка колпака</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="text-[10px] text-slate-400">Зазор, мм
+                            <input id="fit-clearance" type="number" min="1" max="12" step="0.5" value="4" onchange="updateFitment()" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200">
+                        </label>
+                        <label class="text-[10px] text-slate-400">Посадка, мм
+                            <input id="fit-depth" type="number" min="5" max="45" step="1" value="18" onchange="updateFitment()" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200">
+                        </label>
+                    </div>
+                    <label class="text-[10px] text-slate-400 block">Крепление
+                        <select id="fit-mount" onchange="updateFitment()" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200">
+                            <option value="clips">Пружинные клипсы</option>
+                            <option value="ring">Фиксирующее кольцо</option>
+                            <option value="center">Центральная втулка</option>
+                        </select>
+                    </label>
+                    <label class="text-[10px] text-slate-400 block">Количество клипс
+                        <input id="param-clips" type="range" min="4" max="12" step="1" value="6" oninput="updateParameters()" class="mt-1 w-full accent-blue-500 bg-slate-950 h-1.5 rounded-lg cursor-pointer">
+                        <span id="val-clips" class="font-mono text-blue-400">6 шт</span>
+                    </label>
+                    <label class="text-[10px] text-slate-400 block">Открытая площадь вентиляции
+                        <input id="fit-vent" type="range" min="10" max="70" step="5" value="35" oninput="updateFitment()" class="mt-1 w-full accent-emerald-500 bg-slate-950 h-1.5 rounded-lg cursor-pointer">
+                        <span id="val-vent" class="font-mono text-emerald-400">35%</span>
+                    </label>
+                    <label class="flex items-center justify-between text-[10px] text-slate-400 cursor-pointer">Штатный диск
+                        <span class="flex items-center gap-2">
+                            <span id="fit-stock-state" class="text-emerald-400">Вкл</span>
+                            <input id="fit-stock" type="checkbox" checked onchange="setStockVisibility(this.checked)" class="accent-blue-500">
+                        </span>
+                    </label>
+                    <div id="fitment-warning" class="text-[10px] leading-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 px-2.5 py-2">Проверка посадки…</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- RIGHT VIEWPORT: Three.js Canvas Container -->
+        <section class="lg:col-span-8 bg-slate-950 relative flex flex-col h-full overflow-hidden">
+            
+            <!-- Viewport Toolbar -->
+            <div class="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between pointer-events-none gap-3">
+                <div class="flex bg-slate-900/90 backdrop-blur border border-slate-800 p-1.5 rounded-xl pointer-events-auto shadow-lg space-x-1">
+                    <button onclick="setMaterial('silver')" id="mat-silver" title="Серебро" class="ak-swatch bg-slate-300"></button>
+                    <button onclick="setMaterial('matte')" id="mat-matte" title="Чёрный мат" class="ak-swatch bg-slate-950"></button>
+                    <button onclick="setMaterial('chrome')" id="mat-chrome" title="Хром" class="ak-swatch bg-white"></button>
+                    <button onclick="setMaterial('gold')" id="mat-gold" title="Золото" class="ak-swatch bg-amber-500"></button>
+                    <span class="border-l border-slate-700 ml-1 pl-2 text-[10px] self-center text-slate-400">Материал</span>
+                </div>
+                <div class="flex bg-slate-900/90 backdrop-blur border border-slate-800 p-1.5 rounded-xl pointer-events-auto shadow-lg space-x-1">
+                    <button onclick="setViewMode('solid')" id="mode-solid" title="Твёрдая модель" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-600 text-white">3D</button>
+                    <button onclick="setViewMode('wireframe')" id="mode-wireframe" title="Каркас" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-100">Каркас</button>
+                    <span class="border-l border-slate-700 mx-1"></span>
+                    <button onclick="setCameraPreset('front')" title="Вид спереди" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-circle-dot"></i></button>
+                    <button onclick="setCameraPreset('side')" title="Вид сбоку" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-arrows-left-right"></i></button>
+                    <button onclick="setCameraPreset('iso')" title="Изометрический вид" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-cube"></i></button>
+                    <button onclick="toggleAutoRotate()" id="auto-rotate" title="Автовращение" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+            </div>
+
+            <!-- 3D Canvas -->
+            <div id="canvas-container" class="flex-1 w-full h-full relative cursor-grab active:cursor-grabbing"></div>
+
+            <!-- Bottom Print Stats & Actions Panel -->
+            <div class="bg-slate-900/95 backdrop-blur border-t border-slate-800 p-4 grid grid-cols-1 md:grid-cols-3 gap-4 z-10 shrink-0">
+                <div class="space-y-2">
+                    <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Параметры 3D-печати</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="print-filament" onchange="calculatePrintStats()" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+                            <option value="petg">PETG (Реком. 230°C)</option>
+                            <option value="abs">ABS (Ударопрочный)</option>
+                            <option value="pla">PLA (Стандарт)</option>
+                        </select>
+                        <select id="print-infill" onchange="calculatePrintStats()" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+                            <option value="25">Заполнение 25%</option>
+                            <option value="40" selected>Заполнение 40%</option>
+                            <option value="60">Заполнение 60%</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-around bg-slate-950/80 rounded-xl border border-slate-800/80 px-4">
+                    <div class="text-center">
+                        <span class="text-[10px] text-slate-400 uppercase block font-medium">Вес пластика</span>
+                        <span id="stat-weight" class="text-sm font-bold font-mono text-emerald-400">135 г</span>
+                    </div>
+                    <div class="h-8 w-px bg-slate-800"></div>
+                    <div class="text-center">
+                        <span class="text-[10px] text-slate-400 uppercase block font-medium">Время печати</span>
+                        <span id="stat-time" class="text-sm font-bold font-mono text-blue-400">3 ч 54 мин</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button onclick="exportSTL()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Скачать .STL</span>
+                    </button>
+                    <button onclick="openGCodeModal()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 px-4 rounded-xl text-xs transition-all shadow-lg shadow-blue-600/20 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-code"></i>
+                        <span>G-Code</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <section id="metiz-workspace" class="hidden flex-1 overflow-y-auto bg-slate-950 p-5 lg:p-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-wrap items-end justify-between gap-4 border-b border-slate-800 pb-5 mb-5">
+                <div><p class="text-[10px] uppercase tracking-widest text-emerald-400">Единая инженерная платформа</p><h2 id="metiz-title" class="text-2xl font-semibold mt-1">Крепежи и метизы</h2><p id="metiz-subtitle" class="text-xs text-slate-400 mt-1">Параметрический каталог деталей и компонентов</p></div>
+                <div class="flex items-center gap-2"><input id="metiz-search" type="search" placeholder="Найти изделие..." class="bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm w-64 max-w-full"><button id="metiz-project-refresh" class="hidden px-3 py-2 border border-slate-700 rounded-md text-xs hover:bg-slate-800">Обновить проекты</button></div>
+            </div>
+            <div id="metiz-subnav" role="tablist" aria-label="Категории других изделий">
+                <button type="button" data-workspace-category="fasteners" role="tab">Крепежи</button>
+                <button type="button" data-workspace-category="bushings" role="tab">Втулки и другие детали</button>
+                <button type="button" data-workspace-category="projects" role="tab">Мои проекты</button>
+            </div>
+            <div class="metiz-layout">
+                <div class="min-w-0">
+                    <div id="metiz-groups" class="flex flex-wrap gap-2 mb-5"></div>
+                    <div class="mb-5 flex flex-wrap items-center gap-2 border border-slate-800 bg-slate-900/50 rounded-md p-3"><input id="metiz-photo-input" type="file" accept="image/jpeg,image/png,image/webp" multiple class="text-xs text-slate-400"><button id="metiz-photo-analyze" class="px-3 py-2 bg-purple-700 hover:bg-purple-600 rounded-md text-xs font-medium">Определить по фото и построить</button><span id="metiz-photo-status" class="text-xs text-slate-500"></span></div>
+                    <div id="metiz-load-error" class="hidden mb-4 border border-rose-500/40 bg-rose-500/10 rounded-md p-4 text-sm text-rose-200"><p id="metiz-load-error-message"></p><button id="metiz-retry" class="mt-3 px-3 py-1.5 border border-rose-400/50 rounded text-xs hover:bg-rose-500/10">Повторить загрузку</button></div>
+                    <div id="metiz-items" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+                    <div id="metiz-empty" class="hidden py-14 text-center text-sm text-slate-500">Ничего не найдено</div>
+                    <div id="metiz-editor" class="hidden mt-6 border-t border-slate-800 pt-5">
+                        <div class="flex flex-wrap items-center justify-between gap-3 mb-4"><div><h3 id="metiz-editor-title" class="font-semibold"></h3><p class="text-xs text-slate-500 mt-1">Размеры задаются в миллиметрах</p></div><div class="flex gap-2"><select id="metiz-material" class="bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-xs"></select><button id="metiz-build" class="px-3 py-2 bg-blue-700 hover:bg-blue-600 rounded-md text-xs font-medium">Построить 3D</button><button id="metiz-save" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-md text-xs font-medium">Сохранить проект</button></div></div>
+                        <div id="metiz-params" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+                    </div>
+                </div>
+                <aside class="metiz-preview border-t border-slate-800 pt-4">
+                    <div class="flex items-center justify-between gap-3 mb-3"><div><p class="text-[10px] uppercase tracking-wider text-emerald-400">Предпросмотр</p><h3 id="metiz-preview-title" class="text-sm font-medium mt-1">Выберите изделие</h3></div><div class="flex gap-1.5"><button id="metiz-rotate" type="button" title="Включить вращение" aria-label="Включить вращение" class="w-8 h-8 border border-slate-700 rounded text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-rotate"></i></button><button id="metiz-reset-view" type="button" title="Сбросить вид" aria-label="Сбросить вид" class="w-8 h-8 border border-slate-700 rounded text-slate-300 hover:bg-slate-800"><i class="fa-solid fa-arrows-rotate"></i></button></div></div>
+                    <div id="metiz-model-message" class="mb-2 min-h-4 text-xs text-slate-400">Настройте параметры и нажмите «Построить 3D».</div>
+                    <div id="metiz-viewer" class="rounded-md overflow-hidden"></div>
+                    <a id="metiz-model-download" class="mt-3 inline-flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 pointer-events-none opacity-40" aria-disabled="true" download><i class="fa-solid fa-download"></i>Скачать модель GLB</a>
+                </aside>
+            </div>
+            
+    </section>
+
+    <!-- G-code Modal -->
+    <div id="gcode-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-terminal text-blue-500"></i>
+                    <h3 class="font-semibold text-sm text-slate-200">Генератор G-code для 3D-принтера</h3>
+                </div>
+                <button onclick="closeGCodeModal()" class="text-slate-400 hover:text-slate-100">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5 flex-1 overflow-y-auto font-mono text-xs text-emerald-400 bg-slate-950/80 space-y-1" id="gcode-output"></div>
+            <div class="p-4 border-t border-slate-800 bg-slate-900 flex justify-end space-x-3">
+                <button onclick="downloadGCode()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-medium transition-all">
+                    Сохранить .gcode
+                </button>
+                <button onclick="closeGCodeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-medium transition-all">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Three.js Scene Variables
+        let scene, camera, renderer, controls;
+        let hubcapGroup, stockWheelGroup, customLoadedMesh = null;
+        let currentMaterialType = 'silver';
+        let currentViewMode = 'solid';
+        let scannedGeometry = { family: 'classic', center_type: 'open', finish: 'solid_silver', spoke_count: 7, outer_diameter_mm: 381, center_hole_diameter_mm: 54, bulge_depth_mm: 25, face_thickness_mm: 7, rim_depth_mm: 135 };
+        let geometryRatios = null;
+        let selectedDesign = 'classic';
+        let applyingScan = false;
+        const DESIGN_NAMES = { classic: 'Классик', split: 'Split 10', 'y-spoke': 'Y-Spoke', vortex: 'Vortex', mesh: 'Mesh', cross: 'Cross 5', twin: 'Twin 6', petal: 'Petal', aero: 'Aero', rally: 'Rally' };
+        let autoRotate = false;
+
+        const DESIGN_CATALOG = [
+            { id: 'classic', group: 'classic', icon: 'fa-circle', note: 'Сдержанный' },
+            { id: 'split', group: 'sport', icon: 'fa-code-branch', note: 'Раздвоенный' },
+            { id: 'y-spoke', group: 'sport', icon: 'fa-y-combinator', note: 'Динамичный' },
+            { id: 'vortex', group: 'sport', icon: 'fa-fan', note: 'Вихревой' },
+            { id: 'mesh', group: 'tech', icon: 'fa-border-all', note: 'Сетка' },
+            { id: 'cross', group: 'classic', icon: 'fa-plus', note: 'Кросс' },
+            { id: 'twin', group: 'tech', icon: 'fa-code-branch', note: 'Twin' },
+            { id: 'petal', group: 'classic', icon: 'fa-sun', note: 'Лепесток' },
+            { id: 'aero', group: 'tech', icon: 'fa-wind', note: 'Аэродинамика' },
+            { id: 'rally', group: 'sport', icon: 'fa-road', note: 'Rally' }
+        ];
+
+        const materials = {
+            silver: new THREE.MeshStandardMaterial({ color: 0xc9d1d9, metalness: 0.88, roughness: 0.24, side: THREE.DoubleSide }),
+            matte: new THREE.MeshStandardMaterial({ color: 0x1f2022, metalness: 0.18, roughness: 0.72, side: THREE.DoubleSide }),
+            chrome: new THREE.MeshStandardMaterial({ color: 0xeaf2f8, metalness: 1.0, roughness: 0.08, side: THREE.DoubleSide }),
+            gold: new THREE.MeshStandardMaterial({ color: 0xd99a2b, metalness: 0.82, roughness: 0.22, side: THREE.DoubleSide })
+        };
+        const accentMaterial = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.78, roughness: 0.3, side: THREE.DoubleSide });
+
+        function disposeObject(object) {
+            object.traverse(node => {
+                if (node.geometry) node.geometry.dispose();
+                // Shared materials are intentionally kept; only dispose cloned materials.
+                if (node.material && node.material.userData?.generated) node.material.dispose();
+            });
+        }
+
+        function clearHubcapModel() {
+            if (!scene) return;
+            if (hubcapGroup) {
+                scene.remove(hubcapGroup);
+                disposeObject(hubcapGroup);
+                hubcapGroup = null;
+            }
+            if (stockWheelGroup) {
+                scene.remove(stockWheelGroup);
+                disposeObject(stockWheelGroup);
+                stockWheelGroup = null;
+            }
+        }
+
+        function buildStockWheel(radius, bore, rimDepth) {
+            if (!scene) return;
+            stockWheelGroup = new THREE.Group();
+            stockWheelGroup.name = 'Stock_Wheel_Reference';
+            const stockMat = new THREE.MeshStandardMaterial({ color: 0x667085, metalness: .68, roughness: .38, side: THREE.DoubleSide });
+            const stockEdgeMat = new THREE.MeshStandardMaterial({ color: 0x98a2b3, metalness: .78, roughness: .28, side: THREE.DoubleSide });
+            const tireMat = new THREE.MeshStandardMaterial({ color: 0x171b24, roughness: .92, side: THREE.DoubleSide });
+            const scale = .075;
+            const add = (mesh, z = 0) => { mesh.position.z = z * scale; stockWheelGroup.add(mesh); return mesh; };
+            const disc = add(new THREE.Mesh(new THREE.CylinderGeometry(radius * .91 * scale, radius * .91 * scale, 7 * scale, 96), stockMat), -Math.max(8, rimDepth * .28));
+            disc.rotation.x = Math.PI / 2;
+            add(new THREE.Mesh(new THREE.TorusGeometry(radius * .97 * scale, Math.max(7, radius * .07) * scale, 20, 96), tireMat), -Math.max(10, rimDepth * .12));
+            add(new THREE.Mesh(new THREE.TorusGeometry(radius * .89 * scale, Math.max(2.5, radius * .018) * scale, 14, 96), stockEdgeMat), -2);
+            const hubRadius = Math.max(8, bore * .52);
+            const center = add(new THREE.Mesh(new THREE.CylinderGeometry(hubRadius * scale, hubRadius * scale, 9 * scale, 48), stockMat), 0);
+            center.rotation.x = Math.PI / 2;
+            const spokeShape = new THREE.Shape();
+            spokeShape.moveTo(0, -radius * .035 * scale);
+            spokeShape.lineTo(radius * .80 * scale, -radius * .055 * scale);
+            spokeShape.lineTo(radius * .91 * scale, -radius * .032 * scale);
+            spokeShape.lineTo(radius * .91 * scale, radius * .032 * scale);
+            spokeShape.lineTo(radius * .80 * scale, radius * .055 * scale);
+            spokeShape.lineTo(0, radius * .035 * scale);
+            spokeShape.closePath();
+            for (let i = 0; i < 5; i++) {
+                const spoke = new THREE.Mesh(new THREE.ExtrudeGeometry(spokeShape, { depth: 4 * scale, bevelEnabled: true, bevelSegments: 2, bevelSize: .08, bevelThickness: .08 }), stockMat);
+                spoke.rotation.z = i * Math.PI * 2 / 5;
+                spoke.position.z = -1 * scale;
+                stockWheelGroup.add(spoke);
+            }
+            stockWheelGroup.renderOrder = 0;
+            stockWheelGroup.visible = document.getElementById('fit-stock')?.checked !== false;
+            scene.add(stockWheelGroup);
+        }
+
+        // Initialize 3D Engine
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth || 800;
+            const height = container.clientHeight || 600;
+
+            // 1. Scene & Background
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(THEMES[curTheme].l ? 0xe2e8f0 : 0x0f172a);
+
+            // 2. Camera Setup (Positioned clearly as requested: Z=30, Y=10)
+            camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+            camera.position.set(0, 10, 30);
+            camera.lookAt(0, 0, 0);
+
+            // 3. Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            // 4. Orbit Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 100;
+            controls.minDistance = 10;
+
+            // 5. Studio Multi-Source Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+
+            const hemisphereLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.6);
+            scene.add(hemisphereLight);
+
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            mainLight.position.set(20, 30, 20);
+            mainLight.castShadow = true;
+            scene.add(mainLight);
+
+            const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
+            fillLight.position.set(-20, -10, 20);
+            scene.add(fillLight);
+
+            const rimLight = new THREE.DirectionalLight(0x10b981, 0.7);
+            rimLight.position.set(0, -20, -20);
+            scene.add(rimLight);
+
+            // 6. Build initial 3D Wheel & Hubcap
+            buildWheelHubcap();
+
+            // 7. Auto Resize Observer
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const w = entry.contentRect.width;
+                    const h = entry.contentRect.height;
+                    if (w > 0 && h > 0) {
+                        camera.aspect = w / h;
+                        camera.updateProjectionMatrix();
+                        renderer.setSize(w, h);
+                    }
+                }
+            });
+            resizeObserver.observe(container);
+
+            animate();
+            calculatePrintStats();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) { controls.autoRotate = autoRotate; controls.autoRotateSpeed = 1.8; controls.update(); }
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        function buildLegacyWheelHubcap() {
+            if (!scene) return;
+            // Always replace the previous preview; never layer an AI result on top of it.
+            clearHubcapModel();
+            hubcapGroup = new THREE.Group();
+            hubcapGroup.name = 'AI_Parametric_Hubcap';
+            const g = scannedGeometry;
+            const radius = Number(g.outer_diameter_mm) / 2 || Number(document.getElementById('param-radius').value) * 12.7;
+            const ratios = g.geometry_ratios || geometryRatios || {};
+            const bore = Number(g.center_hole_diameter_mm) || Number(ratios.center_hole_ratio) * radius * 2 || radius * 0.15;
+            const depth = Number(g.bulge_depth_mm) || Number(ratios.bulge_depth_ratio) * radius * 2 || Number(document.getElementById('param-depth').value);
+            const faceThickness = Number(g.face_thickness_mm) || Number(ratios.face_thickness_ratio) * radius * 2 || 7;
+            const rimDepth = Number(g.rim_depth_mm) || Number(ratios.rim_depth_ratio) * radius * 2 || 120;
+            const spokes = Math.max(5, Math.min(24, Number(g.spoke_count) || Number(document.getElementById('param-spokes').value)));
+            const family = g.family || 'classic';
+            // UI units are centimetres-like display units; geometry values remain millimetres.
+            const scale = 0.075;
+            const mat = materials[currentMaterialType];
+            const radial = (value, angle, z) => new THREE.Vector3(value * scale * Math.cos(angle), value * scale * Math.sin(angle), z * scale);
+            const addBar = (a, b, width, z, angleOffset = 0) => {
+                const mid = a.clone().add(b).multiplyScalar(0.5);
+                const length = a.distanceTo(b);
+                const shape = new THREE.Shape();
+                const half = Math.max(1.5, width) * scale / 2;
+                shape.moveTo(-length / 2, -half);
+                shape.lineTo(length / 2, -half * 0.72);
+                shape.lineTo(length / 2, half * 0.72);
+                shape.lineTo(-length / 2, half);
+                shape.closePath();
+                const geometry = new THREE.ExtrudeGeometry(shape, { depth: Math.max(2, faceThickness * 1.5) * scale, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.035, bevelThickness: 0.035 });
+                const bar = new THREE.Mesh(geometry, mat);
+                bar.position.set(mid.x, mid.y, z * scale);
+                bar.rotation.z = Math.atan2(b.y - a.y, b.x - a.x) + angleOffset;
+                hubcapGroup.add(bar);
+            };
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(radius * scale * 0.97, Math.max(1.5, faceThickness) * scale, 16, 128), accentMaterial);
+            rim.position.z = -rimDepth * scale * 0.35;
+            hubcapGroup.add(rim);
+            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(radius * scale, radius * scale * 0.97, rimDepth * scale, 96, 1, true), mat);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position.z = -rimDepth * scale * 0.5;
+            hubcapGroup.add(barrel);
+            const hubRadius = (g.center_type === 'cap' ? Math.max(bore, radius * 0.2) : bore) * scale * 0.58;
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(hubRadius, hubRadius * 1.05, Math.max(2, faceThickness * 1.6) * scale, 64), accentMaterial);
+            hub.rotation.x = Math.PI / 2;
+            hub.position.z = Math.max(depth, 3) * scale * 0.65;
+            hubcapGroup.add(hub);
+            const inner = Math.max(bore * 0.68, radius * 0.2);
+            const outer = radius * (family === 'mesh' ? 0.91 : 0.86);
+            const width = Math.max(4, radius * (family === 'mesh' ? 0.045 : 0.075));
+            const addSpoke = (angle, startRatio, endRatio, offset = 0) => {
+                const start = radial(radius * startRatio, angle + offset * 0.25, depth * 0.45);
+                const end = radial(radius * endRatio, angle + offset, depth * 0.45);
+                addBar(start, end, width, depth * 0.45);
+            };
+            // spoke_count is the number of visible outer ends, so this loop
+            // must create exactly one outer end per iteration for every family.
+            for (let i = 0; i < spokes; i++) {
+                const a = i * Math.PI * 2 / spokes;
+                let startRatio = inner / radius;
+                let offset = 0;
+                if (family === 'mesh') {
+                    startRatio = 0.24;
+                    offset = i % 2 ? -0.08 : 0.08;
+                } else if (family === 'split' || family === 'y_shaped') {
+                    startRatio = i % 2 ? 0.38 : 0.22;
+                    offset = i % 2 ? -0.13 : 0.13;
+                } else if (family === 'v_shaped') {
+                    offset = i % 2 ? 0.12 : -0.12;
+                }
+                addSpoke(a, startRatio, outer / radius, offset);
+            }
+            if (g.center_type === 'cap') {
+                const cap = new THREE.Mesh(new THREE.CylinderGeometry(hubRadius * 1.12, hubRadius * 1.12, Math.max(2, faceThickness) * scale, 64), mat);
+                cap.rotation.x = Math.PI / 2;
+                cap.position.z = depth * scale * 0.85;
+                hubcapGroup.add(cap);
+            }
+            hubcapGroup.rotation.x = -0.16;
+            hubcapGroup.position.z = 0.25;
+            scene.add(hubcapGroup);
+        }
+
+        // Detailed procedural wheel library: layered barrel, sculpted spokes and hardware.
+        function buildWheelHubcap() {
+            if (!scene) return;
+            clearHubcapModel(); hubcapGroup = new THREE.Group();
+            hubcapGroup.name = 'AutoKolpak_Hubcap_' + selectedDesign;
+            const g = scannedGeometry, radius = Number(g.outer_diameter_mm) / 2 || Number($('param-radius').value) * 12.7;
+            const q = g.geometry_ratios || geometryRatios || {}, bore = Number(g.center_hole_diameter_mm) || Number(q.center_hole_ratio) * radius * 2 || radius * .15;
+            const depth = Number(g.bulge_depth_mm) || Number(q.bulge_depth_ratio) * radius * 2 || Number($('param-depth').value);
+            const thick = Number(g.face_thickness_mm) || Number(q.face_thickness_ratio) * radius * 2 || 7;
+            const rimDepth = Number(g.rim_depth_mm) || Number(q.rim_depth_ratio) * radius * 2 || 120;
+            buildStockWheel(radius, bore, rimDepth);
+            const requestedCount = Math.max(5, Math.min(24, Number(g.spoke_count) || Number($('param-spokes').value)));
+            const pairedDesign = selectedDesign === 'split' || selectedDesign === 'twin';
+            const count = pairedDesign ? Math.max(3, Math.round(requestedCount / 2)) : requestedCount;
+            const clipCount = Math.max(4, Math.min(12, Number(g.clip_count) || Number($('param-clips').value)));
+            const fitDepth = Number(document.getElementById('fit-depth')?.value || 18);
+            const fitClearance = Number(document.getElementById('fit-clearance')?.value || 4);
+            const scale = .075, front = 3 + fitClearance * .08 + fitDepth * .03, mat = materials[currentMaterialType], accent = accentMaterial;
+            const vec = (r,a,z) => new THREE.Vector3(r*scale*Math.cos(a),r*scale*Math.sin(a),z*scale);
+            const mesh = (geo, material, z=0, name='') => { const o=new THREE.Mesh(geo,material); o.position.z=z*scale; o.name=name; hubcapGroup.add(o); return o; };
+            const ring = (r,w,z,material=accent) => mesh(new THREE.TorusGeometry(r*scale,w*scale,16,128),material,z,'Machined_Ring');
+            const disc = (r,h,z,material=mat,segments=96) => { const o=mesh(new THREE.CylinderGeometry(r*scale,r*.97*scale,h*scale,segments),material,z,'Layer'); o.rotation.x=Math.PI/2; return o; };
+            const bar = (a,b,w,h,material=mat) => { const mid=a.clone().add(b).multiplyScalar(.5), len=a.distanceTo(b), sh=new THREE.Shape(), half=Math.max(1.5,w)*scale/2;
+                sh.moveTo(-len/2,-half*.68); sh.lineTo(-len*.38,-half); sh.lineTo(len/2,-half*.58); sh.lineTo(len/2,half*.58); sh.lineTo(-len*.38,half); sh.closePath();
+                const geo=new THREE.ExtrudeGeometry(sh,{depth:Math.max(2,h)*scale,bevelEnabled:true,bevelSegments:3,bevelSize:.08,bevelThickness:.08}); const o=new THREE.Mesh(geo,material); o.position.copy(mid); o.rotation.z=Math.atan2(b.y-a.y,b.x-a.x); hubcapGroup.add(o); return o; };
+            const spoke = (a,from,to,skew=0,width=radius*.06,material=mat,z=front,height=thick*1.35) => bar(vec(radius*from,a+skew*.22,z),vec(radius*to,a+skew,z),width,height,material);
+            ring(radius * .965, Math.max(1.5, thick * .38), front, accent);
+            const hubRadius = Math.max(bore * .58, radius * .11);
+            const inner = Math.min(radius * .50, Math.max(hubRadius * 1.18, bore * .62));
+            const outer = radius * .87, w = Math.max(4.5, radius * .065), d = selectedDesign;
+            const spokeStart = inner / radius;
+            for(let i=0;i<count;i++){ const a=i*Math.PI*2/count;
+                if(d==='split'||d==='twin'){ const x=d==='twin'?.085:.14; spoke(a,spokeStart*.92,.94,-x,w*.62); spoke(a,spokeStart,.94,x,w*.62); spoke(a,spokeStart*.9,.50,0,w*.34,accent,front+thick*.15,thick*.45); }
+                else if(d==='y-spoke'||d==='petal'){ const x=d==='petal'?.24:.16; spoke(a,spokeStart,.57,0,w*.82); spoke(a-x,spokeStart*.98,.94,0,w*.68); spoke(a+x,spokeStart*.98,.94,0,w*.68); }
+                else if(d==='vortex'||d==='aero'){ spoke(a,spokeStart,.94,d==='aero'?.30:.20,w*.86); if(d==='aero') spoke(a+.14,spokeStart*.98,.90,.06,w*.32,accent,front+thick*.16,thick*.44); }
+                else if(d==='mesh'){ spoke(a,spokeStart,.94,i%2?-.11:.11,w*.58); spoke(a+Math.PI/count,spokeStart*.98,.94,i%2?.11:-.11,w*.42,accent,front+thick*.13,thick*.42); }
+                else if(d==='cross'){ spoke(a,spokeStart,.94,0,w*.58); spoke(a+Math.PI/count,spokeStart*.98,.94,0,w*.58); }
+                else if(d==='rally'){ spoke(a,spokeStart,.95,0,w*1.12); spoke(a+.035,Math.max(spokeStart,.46),.92,0,w*.28,accent,front+thick*.18,thick*.42); }
+                else spoke(a,spokeStart,.94,d==='classic'?0:.04,w);
+            }
+            if(d==='mesh'){ ring(radius*.56,w*.38,front+thick*.18); ring(radius*.72,w*.28,front+thick*.16); }
+            if(d==='rally') ring(radius*.68,w*.4,front+thick*.18);
+            disc(hubRadius,Math.max(1.5,thick*.5),front,mat,64);
+            const lugRadius = hubRadius * .76, hubFaceZ = front + Math.max(1.5,thick*.5) * .5;
+            for(let i=0;i<5;i++){ const a=i*Math.PI*2/5+Math.PI/10; const bolt=disc(3.1,Math.max(2.2,thick*.35),hubFaceZ+Math.max(2.2,thick*.35)*.5,accent,20); bolt.position.x=lugRadius*scale*Math.cos(a); bolt.position.y=lugRadius*scale*Math.sin(a); }
+            const clipRadius=radius*.94, clipThickness=Math.max(2,thick*.32), clipZ=front+Math.max(1.5,thick*.38)*.5;
+            for(let i=0;i<clipCount;i++){ const a=i*Math.PI*2/clipCount; const clip=disc(4.2,clipThickness,clipZ+clipThickness*.5,accent,20); clip.position.x=clipRadius*scale*Math.cos(a); clip.position.y=clipRadius*scale*Math.sin(a); }
+            // Rear retaining ring is intentionally omitted: the cap is a face overlay, not a second wheel barrel.
+            const applyMaterialMode = node => {
+                if (!node.material) return;
+                node.material = node.material.clone();
+                node.material.wireframe = currentViewMode === 'wireframe';
+                node.material.needsUpdate = true;
+            };
+            hubcapGroup.traverse(applyMaterialMode);
+            hubcapGroup.rotation.set(0, 0, 0);
+            hubcapGroup.renderOrder = 1;
+            scene.add(hubcapGroup);
+        }
+
+        function setCameraPreset(preset) {
+            if (!camera || !controls) return;
+            const positions = { front: [0, 0, 30], side: [30, 2, 0], iso: [22, 16, 24] };
+            const p = positions[preset] || positions.iso;
+            camera.position.set(...p);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+        function toggleAutoRotate() {
+            autoRotate = !autoRotate;
+            const button = document.getElementById('auto-rotate');
+            if (button) button.classList.toggle('bg-blue-600', autoRotate);
+            if (button) button.classList.toggle('text-white', autoRotate);
+        }
+        function renderDesignCatalog(filter = 'all') {
+            const box = document.getElementById('design-catalog');
+            if (!box) return;
+            box.innerHTML = DESIGN_CATALOG.filter(item => filter === 'all' || item.group === filter).map(item => `
+                <button type="button" data-design="${item.id}" onclick="setWheelDesign('${item.id}')" class="ak-design-card ${item.id === selectedDesign ? 'active' : ''} border border-slate-800 rounded-xl p-2 text-left bg-slate-950/70">
+                    <div class="ak-design-preview h-10 rounded-lg flex items-center justify-center mb-1.5"><i class="fa-solid ${item.icon} text-blue-400"></i></div>
+                    <span class="block text-[10px] font-semibold text-slate-200 truncate">${DESIGN_NAMES[item.id]}</span>
+                    <span class="block text-[9px] text-slate-500 truncate">${item.note}</span>
+                </button>`).join('');
+        }
+        function filterDesignCatalog(filter) { renderDesignCatalog(filter); }
+        function setWheelDesign(design) {
+            selectedDesign = DESIGN_NAMES[design] ? design : 'classic';
+            const el = $('param-design'); if (el) el.value = selectedDesign;
+            const label = $('val-design'); if (label) label.textContent = DESIGN_NAMES[selectedDesign];
+            scannedGeometry = { ...scannedGeometry, design: selectedDesign };
+            buildWheelHubcap();
+            renderDesignCatalog(document.getElementById('design-filter')?.value || 'all');
+        }
+        function setStockVisibility(visible) {
+            if (stockWheelGroup) stockWheelGroup.visible = Boolean(visible);
+            const state = document.getElementById('fit-stock-state');
+            if (state) {
+                state.textContent = visible ? 'Вкл' : 'Выкл';
+                state.className = visible ? 'text-emerald-400' : 'text-slate-500';
+            }
+        }
+        function updateFitment() {
+            const clearance = Number(document.getElementById('fit-clearance')?.value || 4);
+            const depth = Number(document.getElementById('fit-depth')?.value || 18);
+            const vent = Number(document.getElementById('fit-vent')?.value || 35);
+            const mount = document.getElementById('fit-mount')?.value || 'clips';
+            const warning = document.getElementById('fitment-warning');
+            setStockVisibility(document.getElementById('fit-stock')?.checked !== false);
+            const messages = [];
+            if (clearance < 3) messages.push('Увеличьте зазор минимум до 3 мм.');
+            if (vent < 25) messages.push('Вентиляция ниже 25%: проверьте нагрев тормозов.');
+            if (depth < 12) messages.push('Посадка менее 12 мм может быть нестабильной.');
+            if (mount === 'center' && Number(document.getElementById('param-bore')?.value || 54) < 45) messages.push('Центральная втулка требует большего ЦО.');
+            const ventLabel = document.getElementById('val-vent'); if (ventLabel) ventLabel.textContent = vent + '%';
+            warning.textContent = messages.length ? messages.join(' ') : 'Посадка выглядит допустимо. Проверьте фактические размеры диска и суппорта перед печатью.';
+            warning.className = messages.length ? 'text-[10px] leading-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 px-2.5 py-2' : 'text-[10px] leading-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 px-2.5 py-2';
+            buildWheelHubcap();
+            calculatePrintStats();
+        }
+        function updateParameters() {
+            const radius = document.getElementById('param-radius').value;
+            const bore = Number(document.getElementById('param-bore').value);
+            const spokes = Number(document.getElementById('param-spokes').value);
+            const depth = Number(document.getElementById('param-depth').value);
+            if (!applyingScan) {
+                scannedGeometry = { ...scannedGeometry, outer_diameter_mm: Number(radius) * 25.4, center_hole_diameter_mm: bore, spoke_count: spokes, bulge_depth_mm: depth, clip_count: Number(document.getElementById('param-clips').value) };
+
+                geometryRatios = null;
+            }
+            document.getElementById('val-radius').innerText = 'R' + radius;
+            document.getElementById('val-bore').innerText = bore + ' мм';
+            document.getElementById('val-spokes').innerText = spokes + ' шт';
+            document.getElementById('val-depth').innerText = depth + ' мм';
+            document.getElementById('val-clips').innerText = document.getElementById('param-clips').value + ' шт';
+            buildWheelHubcap();
+            calculatePrintStats();
+        }
+
+        // Material Selector
+        function setMaterial(type) {
+            currentMaterialType = materials[type] ? type : 'silver';
+            ['silver', 'matte', 'chrome', 'gold'].forEach(t => {
+                const btn = document.getElementById('mat-' + t);
+                if (btn) btn.classList.toggle('ring-2', t === currentMaterialType);
+            });
+            buildWheelHubcap();
+            calculatePrintStats();
+        }
+
+        // Wireframe / Solid Mode
+        function setViewMode(mode) {
+            currentViewMode = mode === 'wireframe' ? 'wireframe' : 'solid';
+            ['solid', 'wireframe'].forEach(m => {
+                const btn = document.getElementById('mode-' + m);
+                if (btn) btn.className = m === currentViewMode ? 'px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-600 text-white' : 'px-2.5 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-100';
+            });
+            buildWheelHubcap();
+        }
+
+        // Tab Switcher
+        function switchTab(tabNum) {
+            for (let i = 1; i <= 2; i++) {
+                document.getElementById('tab-content-' + i).classList.add('hidden');
+                const btn = document.getElementById('tab-btn-' + i);
+                btn.className = 'px-4 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-slate-100';
+            }
+            document.getElementById('tab-content-' + tabNum).classList.remove('hidden');
+            document.getElementById('tab-btn-' + tabNum).className = 'px-4 py-1.5 rounded-lg text-xs font-medium transition-all bg-blue-600 text-white shadow';
+        }
+
+        // Print Statistics Calculator
+        function calculatePrintStats() {
+            const radius = Number(document.getElementById('param-radius')?.value || 15);
+            const diameter = radius * 25.4;
+            const spokes = Number(document.getElementById('param-spokes')?.value || 7);
+            const depth = Number(document.getElementById('param-depth')?.value || 25);
+            const clips = Number(document.getElementById('param-clips')?.value || 6);
+            const infill = Number(document.getElementById('print-infill')?.value || 40) / 100;
+            const filament = document.getElementById('print-filament')?.value || 'petg';
+            const density = { pla: 1.24, petg: 1.27, abs: 1.04 }[filament] || 1.27;
+            const materialFactor = { silver: 1, matte: .98, chrome: 1.02, gold: 1.04 }[currentMaterialType] || 1;
+            const area = Math.PI * Math.pow(diameter / 2, 2);
+            const structuralVolume = area * (5.2 + depth * .035) * (.17 + infill * .56);
+            const spokeVolume = area * (spokes / 10) * .018;
+            const clipVolume = clips * 18;
+            const weight = Math.max(40, Math.round((structuralVolume + spokeVolume + clipVolume) * density / 1000 * materialFactor));
+            const totalMins = Math.max(25, Math.round(weight * (1.15 + infill * .9) + diameter * .32));
+            const hours = Math.floor(totalMins / 60), mins = totalMins % 60;
+            document.getElementById('stat-weight').innerText = weight + ' г';
+            document.getElementById('stat-time').innerText = hours + ' ч ' + String(mins).padStart(2, '0') + ' мин';
+        }
+
+        // STL import is not implemented in the original HTML. Do not fake success.
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const status = document.getElementById('upload-status');
+            status.classList.remove('hidden');
+            status.textContent = file.name.toLowerCase().endsWith('.stl')
+                ? 'Файл выбран, но импорт геометрии пока не подключён. Требуется интеграция STLLoader.'
+                : 'Поддерживается только STL.';
+            event.target.value = '';
+        }
+
+        // Результат ИИ: читаемая таблица + кнопка применения к 3D-модели
+        const FAMILY_RU = { classic: 'Классический', v_shaped: 'V-образные спицы', split: 'Раздвоенные спицы', y_shaped: 'Y-образные спицы', mesh: 'Сетка (mesh)' };
+        const FINISH_RU = { solid_silver: 'Серебро', solid_black: 'Чёрный', diamond_cut: 'Алмазная проточка' };
+        const CENTER_RU = { open: 'открытый', cap: 'с колпачком' };
+        const isNum = v => typeof v === 'number' && isFinite(v);
+
+        function renderScanResult(data) {
+            let box = document.getElementById('ai-result');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'ai-result';
+                box.className = 'mt-3 p-3 text-left text-xs text-slate-200 bg-slate-900 rounded-xl space-y-1';
+                document.getElementById('tab-content-2').appendChild(box);
+            }
+            box.replaceChildren();
+            const p = data.parameters || {};
+            const c = data.confidence || {};
+            const r = data.geometry_ratios || {};
+            const score = o => (o && isNum(o.score)) ? ' · ' + Math.round(o.score * 100) + '%' : '';
+            const top3 = (o, map) => (o && Array.isArray(o.top3))
+                ? 'варианты: ' + o.top3.map(t => ((map && map[t.label]) || t.label) + ' ' + Math.round(t.score * 100) + '%').join(', ') : '';
+            const mm = (v, d = 0) => isNum(v) ? v.toFixed(d) + ' мм' : '—';
+            const pc = v => isNum(v) ? (v * 100).toFixed(1) + ' % диаметра' : '—';
+
+            const addTitle = t => {
+                const h = document.createElement('p');
+                h.className = 'pt-2 text-[10px] uppercase tracking-wider text-slate-500';
+                h.textContent = t; box.appendChild(h);
+            };
+            const addRow = (k, v, hint) => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between gap-3';
+                const l = document.createElement('span'); l.className = 'text-slate-400'; l.textContent = k;
+                const val = document.createElement('span'); val.className = 'font-mono text-emerald-400 text-right'; val.textContent = v;
+                row.append(l, val); box.appendChild(row);
+                if (hint) {
+                    const h = document.createElement('p');
+                    h.className = 'text-[10px] text-slate-500 text-right'; h.textContent = hint; box.appendChild(h);
+                }
+            };
+
+            addTitle('Распознано по фото');
+            addRow('Тип', (FAMILY_RU[p.family] || p.family) + score(c.family), top3(c.family, FAMILY_RU));
+            addRow('Внешние концы спиц', p.visible_outer_end_count || p.spoke_count + score(c.spoke_count), top3(c.spoke_count));
+            addRow('Центр', (CENTER_RU[p.center_type] || p.center_type) + score(c.center), '');
+            addRow('Отделка', (FINISH_RU[p.finish] || p.finish) + score(c.finish), top3(c.finish, FINISH_RU));
+
+            addTitle('Размеры' + (isNum(p.outer_diameter_mm) ? '' : ' (укажите наружный диаметр, чтобы получить мм)'));
+            addRow('Внешний диаметр', mm(p.outer_diameter_mm));
+            addRow('Центральное отверстие', p.center_type === 'cap' ? 'скрыто колпачком' : mm(p.center_hole_diameter_mm), pc(r.center_hole_ratio));
+            addRow('Выпуклость', mm(p.bulge_depth_mm), pc(r.bulge_depth_ratio));
+            addRow('Толщина лицевой части', mm(p.face_thickness_mm, 1), pc(r.face_thickness_ratio));
+            addRow('Глубина обода', mm(p.rim_depth_mm), pc(r.rim_depth_ratio));
+
+            const warn = document.createElement('p');
+            warn.className = 'text-[10px] text-amber-300 pt-2';
+            warn.textContent = data.warning || '';
+            const btn = document.createElement('button');
+            btn.className = 'mt-2 w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-all';
+            btn.textContent = 'Применить к параметрам';
+            btn.onclick = () => applyScanToModel(p);
+            box.append(warn, btn);
+        }
+
+        function applyScanToModel(p) {
+            scannedGeometry = { ...scannedGeometry, ...p };
+            const apiDesign = { classic: 'classic', v_shaped: 'vortex', split: 'split', y_shaped: 'y-spoke', mesh: 'mesh' };
+            if (p.family && apiDesign[p.family]) setWheelDesign(apiDesign[p.family]);
+
+            geometryRatios = p.geometry_ratios || geometryRatios;
+            applyingScan = true;
+            const set = (id, value) => {
+                const el = document.getElementById(id);
+                if (!el || !isNum(value)) return;
+                el.value = Math.min(Number(el.max), Math.max(Number(el.min), Math.round(value)));
+            };
+            set('param-bore', p.center_hole_diameter_mm);
+            set('param-spokes', p.spoke_count);
+            set('param-depth', p.bulge_depth_mm);
+            if (isNum(p.outer_diameter_mm)) {
+                const rim = document.getElementById('param-radius');
+                rim.value = String(Math.max(13, Math.min(17, Math.round(p.outer_diameter_mm / 25.4))));
+            }
+            updateParameters();
+            applyingScan = false;
+            buildWheelHubcap();
+            document.getElementById('ai-result')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function refreshAiStatus() {
+            const el = document.getElementById('ai-status');
+            try {
+                const info = await (await fetch('/api/model-info')).json();
+                el.textContent = info.ready ? 'Модель загружена и готова.' : (info.status || 'Модель не загружена.');
+                el.className = 'text-[11px] ' + (info.ready ? 'text-emerald-400' : 'text-amber-300');
+            } catch (e) {
+                el.textContent = 'Сервер недоступен.';
+                el.className = 'text-[11px] text-red-400';
+            }
+        }
+
+        // Real backend request; no fabricated AI results.
+        let lastScanFile = null;
+
+        function errText(data, status) {
+            const d = data && data.detail;
+            if (Array.isArray(d)) return d.map(x => x.msg || JSON.stringify(x)).join('; ');
+            return d || `Ошибка сервера: HTTP ${status}`;
+        }
+
+        function handleImageScan(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const img = document.getElementById('scan-img');
+            if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+            img.dataset.url = URL.createObjectURL(file);
+            img.onerror = () => img.classList.add('hidden');
+            img.src = img.dataset.url;
+            img.classList.remove('hidden');
+            lastScanFile = file;
+            event.target.value = '';
+            runScan(file);
+        }
+
+        async function runScan(file) {
+            const previewBox = document.getElementById('scanner-preview-box');
+            const loading = document.getElementById('scanner-loading');
+            const log = document.getElementById('scanner-log');
+            const diamRaw = document.getElementById('ref-diam').value.trim();
+            const diam = diamRaw === '' ? null : Number(diamRaw);
+            if (diam !== null && !(diam >= 330 && diam <= 460)) {
+                log.innerText = '';
+                previewBox.classList.remove('hidden');
+                alert('Наружный диаметр должен быть от 330 до 460 мм (или оставьте поле пустым).');
+                return;
+            }
+            previewBox.classList.add('hidden');
+            loading.classList.remove('hidden');
+            log.innerText = '[API] Отправка изображения на сервер…';
+            try {
+                const form = new FormData();
+                form.append('file', file);
+                if (diam !== null) form.append('reference_outer_diameter_mm', String(diam));
+                const response = await fetch('/api/predict', { method: 'POST', body: form });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(errText(data, response.status));
+                log.innerText = '[AI] Параметры получены, строю 3D-модель…';
+                const modelParameters = data.geometry || data.parameters || {};
+                if (diam !== null && !isNum(modelParameters.outer_diameter_mm)) modelParameters.outer_diameter_mm = diam;
+                applyScanToModel(modelParameters);
+                renderScanResult(data);
+                if (data.model?.url) {
+                    let link = document.getElementById('blender-model-link');
+                    if (!link) {
+                        link = document.createElement('a');
+                        link.id = 'blender-model-link';
+                        link.className = 'mt-2 block text-xs text-emerald-400 hover:text-emerald-300';
+                        document.getElementById('tab-content-2').appendChild(link);
+                    }
+                    link.href = data.model.url;
+                    link.download = 'autokolpak-blender.glb';
+                    link.textContent = 'Скачать 3D-модель, построенную Blender';
+                    log.innerText = '[Blender] Модель построена и доступна для скачивания.';
+                } else if (data.model_error) {
+                    log.innerText = '[Blender] ' + data.model_error;
+                }
+            } catch (error) {
+                log.innerText = '[ОШИБКА] ' + (error.message || 'Не удалось выполнить запрос');
+            } finally {
+                loading.classList.add('hidden');
+                previewBox.classList.remove('hidden');
+            }
+        }
+
+        // STL Export
+        // STL Export
+        function exportSTL() {
+            if (!hubcapGroup) { alert('Нет модели для экспорта: сцена пуста.'); return; }
+            if (!Number.isFinite(Number(scannedGeometry.outer_diameter_mm))) {
+                alert('Для STL нужен измеренный наружный диаметр. Введите его в поле сканера и выполните анализ заново.');
+                return;
+            }
+            const exporter = new THREE.STLExporter();
+            const exportGroup = hubcapGroup.clone(true);
+            // Preview units are scaled by 0.075; restore millimetres for STL output.
+            exportGroup.scale.setScalar(1 / 0.075);
+            exportGroup.updateMatrixWorld(true);
+            const result = exporter.parse(exportGroup, { binary: true });
+            const blob = new Blob([result], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'autokolpak_' + (scannedGeometry.family || 'model') + '_' + Math.round(Number(scannedGeometry.outer_diameter_mm) || 0) + 'mm.stl';
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }
+
+        // Do not generate fake printer paths. A real slicer is required.
+        function openGCodeModal() {
+            document.getElementById('gcode-output').innerText =
+                'Экспорт G-code отключён: демонстрационные траектории не рассчитываются по геометрии модели. Для безопасного экспорта подключите слайсер и профиль принтера.';
+            document.getElementById('gcode-modal').classList.remove('hidden');
+        }
+
+        function closeGCodeModal() {
+            document.getElementById('gcode-modal').classList.add('hidden');
+        }
+
+        function downloadGCode() {
+            const text = document.getElementById('gcode-output').innerText;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'autokolpak_print.gcode';
+            link.click();
+        }
+
+        const $ = id => document.getElementById(id);
+
+        const METIZ_PARAM_META = { length:['Длина',1,500], diameter:['Наружный диаметр',.5,200], inner_diameter:['Внутренний диаметр',.2,199], hole_diameter:['Диаметр отверстия',.2,199], wall_thickness:['Толщина стенки',.2,50], width:['Ширина / под ключ',1,300], height:['Высота',.5,200], head_diameter:['Диаметр головки',1,200], head_height:['Высота головки',.5,100], wrench_size:['Размер под ключ',1,300], flange_diameter:['Диаметр буртика',1,250], flange_height:['Высота буртика',.5,100], thread_pitch:['Шаг резьбы',.2,10], thread_length:['Длина резьбы',1,500], holes_count:['Количество отверстий',1,32] };
+        const METIZ_MATERIALS = {steel:'Сталь',stainless:'Нержавеющая сталь',zinc:'Оцинкованная сталь',brass:'Латунь',aluminum:'Алюминий',plastic:'Пластик'};
+        let activeWorkspace='hubcaps', metizCatalog={fasteners:[],bushings:[],materials:{}}, metizProjects=[], metizMode='fasteners', metizFilter='all', metizSelected=null, metizParams={}, metizProjectId=null;
+        const metizEsc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+        async function metizApi(url,options={}){const response=await fetch(url,options);const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.detail||`Ошибка API ${response.status}`);return data;}
+        function switchWorkspace(name){
+            const validWorkspace = ['hubcaps','fasteners','bushings','projects'].includes(name) ? name : 'hubcaps';
+            const hubcaps=validWorkspace==='hubcaps';
+            activeWorkspace=validWorkspace;
+            document.querySelector('main.flex-1.grid')?.classList.toggle('hidden',!hubcaps);
+            $('metiz-workspace').classList.toggle('hidden',hubcaps);
+            $('hubcap-tabs').classList.toggle('hidden',!hubcaps);
+            $('metiz-subnav').classList.toggle('hidden',hubcaps);
+
+            $('workspace-btn-hubcaps').classList.toggle('active',hubcaps);
+            $('workspace-btn-fasteners').classList.toggle('active',!hubcaps);
+            $('workspace-btn-hubcaps').toggleAttribute('aria-current',hubcaps);
+            $('workspace-btn-fasteners').toggleAttribute('aria-current',!hubcaps);
+            document.querySelectorAll('[data-workspace-category]').forEach(button=>{
+                const selected=button.dataset.workspaceCategory===validWorkspace;
+                button.classList.toggle('active',selected);
+                button.setAttribute('aria-selected',String(selected));
+            });
+            if(!hubcaps)renderMetizWorkspace(validWorkspace);
+        }
+        async function renderMetizWorkspace(mode){
+            metizMode=mode; metizFilter='all'; metizSelected=null; metizProjectId=null; const projects=mode==='projects';
+            $('metiz-title').textContent=mode==='fasteners'?'Крепежи и метизы':mode==='bushings'?'Втулки и другие детали':'Сохранённые проекты';
+            $('metiz-subtitle').textContent=projects?'Проекты крепежа и втулок в локальной базе':'Каталог изделий. Выберите деталь, чтобы настроить размеры и построить её 3D-модель.';
+            $('metiz-search').placeholder=projects?'Поиск по проектам...':'Поиск по названию и группе...'; $('metiz-search').value=''; $('metiz-project-refresh').classList.toggle('hidden',!projects); $('metiz-editor').classList.add('hidden');
+            $('metiz-load-error').classList.add('hidden'); $('metiz-items').classList.remove('hidden'); $('metiz-empty').classList.add('hidden');
+            try{
+                if(projects)metizProjects=(await metizApi('/api/metiz/projects')).projects;
+                else if(!metizCatalog.fasteners.length||!metizCatalog.bushings.length)metizCatalog=await metizApi('/api/metiz/catalog');
+                drawMetizGroups(); drawMetizItems();
+            }catch(e){
+                $('metiz-load-error-message').textContent='Не удалось загрузить каталог: '+e.message;
+                $('metiz-load-error').classList.remove('hidden'); $('metiz-items').classList.add('hidden'); $('metiz-groups').replaceChildren();
+            }
+        }
+        function drawMetizGroups(){
+            const el=$('metiz-groups'); if(metizMode==='projects'){el.innerHTML='';return;}
+            const items=metizMode==='bushings'?metizCatalog.bushings:metizCatalog.fasteners; const groups=['all',...new Set(items.map(i=>i.group))];
+            el.innerHTML=groups.map(g=>`<button data-metiz-filter="${metizEsc(g)}" class="px-3 py-1.5 border rounded-md text-xs ${g===metizFilter?'border-emerald-500 text-emerald-300 bg-emerald-500/10':'border-slate-700 text-slate-400 hover:bg-slate-900'}">${g==='all'?'Все группы':metizEsc(g)}</button>`).join('');
+            el.querySelectorAll('[data-metiz-filter]').forEach(b=>b.addEventListener('click',()=>{metizFilter=b.dataset.metizFilter;drawMetizGroups();drawMetizItems();}));
+        }
+        function drawMetizItems(){
+            const q=$('metiz-search').value.trim().toLowerCase(); let rows=[];
+            if(metizMode==='projects') rows=metizProjects.filter(p=>`${p.name} ${p.part_type} ${p.category}`.toLowerCase().includes(q)).map(p=>({project:p,id:p.id,name:p.name,group:p.category==='bushing'?'Втулки':'Крепежи',sub:`${p.part_type} · ${p.material}`}));
+            else {const source=metizMode==='bushings'?metizCatalog.bushings:metizCatalog.fasteners;rows=source.filter(x=>(metizFilter==='all'||x.group===metizFilter)&&`${x.name} ${x.group} ${x.id}`.toLowerCase().includes(q));}
+            $('metiz-items').innerHTML=rows.map(x=>`<article class="border border-slate-800 bg-slate-900/60 rounded-md p-4 flex flex-col min-h-36"><div class="flex items-start justify-between gap-3"><span class="text-[10px] uppercase tracking-wider text-emerald-400">${metizEsc(x.group)}</span><i class="fa-solid ${x.project?'fa-folder-open':metizMode==='bushings'?'fa-circle-nodes':'fa-screwdriver-wrench'} text-slate-500"></i></div><h3 class="text-sm font-medium mt-3">${metizEsc(x.name)}</h3><p class="text-[11px] text-slate-500 mt-1">${metizEsc(x.sub||'Параметрическая модель · мм')}</p><div class="mt-auto pt-4 flex items-center justify-between"><button data-metiz-open="${metizEsc(x.id)}" class="text-left text-xs text-slate-300 hover:text-emerald-300">${x.project?'Открыть проект':'Настроить размеры'} <i class="fa-solid fa-arrow-right ml-1"></i></button>${x.project?`<button data-metiz-delete="${metizEsc(x.id)}" title="Удалить проект" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>`:''}</div></article>`).join('');
+            $('metiz-empty').classList.toggle('hidden',rows.length!==0); $('metiz-items').classList.toggle('hidden',rows.length===0); $('metiz-items').querySelectorAll('[data-metiz-open]').forEach(b=>b.addEventListener('click',()=>metizMode==='projects'?openMetizProject(b.dataset.metizOpen):openMetizPart(b.dataset.metizOpen))); $('metiz-items').querySelectorAll('[data-metiz-delete]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Удалить проект?'))return;try{await metizApi('/api/metiz/projects/'+encodeURIComponent(b.dataset.metizDelete),{method:'DELETE'});await renderMetizWorkspace('projects');}catch(e){alert(e.message);}}));
+        }
+        async function openMetizPart(id,opts={}){
+            const list=metizMode==='bushings'?metizCatalog.bushings:metizCatalog.fasteners; metizSelected=list.find(x=>x.id===id); if(!metizSelected)return;
+            $('metiz-preview-title').textContent=metizSelected.name;
+            $('metiz-model-message').textContent='Построение 3D-модели…'; $('metiz-model-download').classList.add('pointer-events-none','opacity-40'); $('metiz-model-download').setAttribute('aria-disabled','true');
+            metizParams={...metizSelected.default,...(opts.params||{})}; metizProjectId=opts.projectId||null; $('metiz-editor-title').textContent=metizSelected.name;
+            $('metiz-material').innerHTML=Object.entries(metizCatalog.materials||METIZ_MATERIALS).map(([k,v])=>`<option value="${metizEsc(k)}" ${k===(opts.material||'steel')?'selected':''}>${metizEsc(v)}</option>`).join('');
+            $('metiz-params').innerHTML=Object.entries(metizParams).filter(([k])=>METIZ_PARAM_META[k]).map(([k,v])=>{const [label,min,max]=METIZ_PARAM_META[k];return `<label class="block text-xs text-slate-400">${label}<span class="block mt-1"><input data-metiz-param="${k}" type="number" min="${min}" max="${max}" step="${k==='holes_count'?1:.1}" value="${Number(v)}" class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-100"></span></label>`;}).join('');
+            $('metiz-editor').classList.remove('hidden'); $('metiz-editor').scrollIntoView({behavior:'smooth',block:'nearest'}); $('metiz-params').querySelectorAll('[data-metiz-param]').forEach(input=>input.addEventListener('input',()=>{metizParams[input.dataset.metizParam]=Number(input.value);}));
+            await buildMetizModel();
+        }
+
+        function openMetizProject(id){
+            metizApi('/api/metiz/projects/'+encodeURIComponent(id)).then(({project:p})=>{
+                metizMode=p.category==='bushing'?'bushings':'fasteners';
+                return (metizCatalog.fasteners.length?Promise.resolve(metizCatalog):metizApi('/api/metiz/catalog')).then(data=>{metizCatalog=data;openMetizPart(p.part_type,{params:p.params,material:p.material,projectId:p.id});});
+            }).catch(e=>alert('Не удалось открыть проект: '+e.message));
+        }
+        let metizViewer={scene:null,camera:null,renderer:null,controls:null,model:null,autoRotate:true};
+        function clearMetizViewer(){
+            if(!metizViewer.renderer)return;
+            if(metizViewer.model){metizViewer.scene.remove(metizViewer.model);disposeObject(metizViewer.model);metizViewer.model=null;}
+            metizViewer.controls?.dispose(); metizViewer.renderer.dispose();
+            metizViewer.renderer.domElement.remove(); metizViewer={scene:null,camera:null,renderer:null,controls:null,model:null,autoRotate:true};
+        }
+        function loadMetizGLB(url){
+            const host=$('metiz-viewer'); if(!host||!THREE.GLTFLoader)return; clearMetizViewer(); host.replaceChildren();
+            const width=host.clientWidth||720,height=host.clientHeight||360; const s=new THREE.Scene(); s.background=new THREE.Color(0x0b1220); const c=new THREE.PerspectiveCamera(38,width/height,.001,100); c.position.set(.12,.10,.22);
+            const r=new THREE.WebGLRenderer({antialias:true,alpha:true}); r.setPixelRatio(Math.min(window.devicePixelRatio||1,2)); r.setSize(width,height); r.outputEncoding=THREE.sRGBEncoding; host.appendChild(r.domElement);
+            const ctl=new THREE.OrbitControls(c,r.domElement); ctl.enableDamping=true; ctl.autoRotate=metizViewer.autoRotate; ctl.autoRotateSpeed=2.2; ctl.minDistance=.01; ctl.maxDistance=10;
+            s.add(new THREE.HemisphereLight(0xddeeff,0x182235,2.1)); const key=new THREE.DirectionalLight(0xffffff,2.4); key.position.set(2,3,4); s.add(key); const fill=new THREE.DirectionalLight(0x70a7ff,1.1); fill.position.set(-3,1,2); s.add(fill);
+            metizViewer={scene:s,camera:c,renderer:r,controls:ctl,model:null,autoRotate:metizViewer.autoRotate,modelUrl:url};
+            new THREE.GLTFLoader().load(url,g=>{if(metizViewer.renderer!==r)return;const model=g.scene; metizViewer.model=model; s.add(model); const box=new THREE.Box3().setFromObject(model), size=box.getSize(new THREE.Vector3()), center=box.getCenter(new THREE.Vector3()), max=Math.max(size.x,size.y,size.z)||1; model.position.sub(center); const distance=max*2.2; c.position.set(distance,distance*.75,distance); ctl.target.set(0,0,0); ctl.update();},undefined,e=>{$('metiz-model-message').textContent='Не удалось загрузить GLB: '+e.message;});
+            const tick=()=>{if(metizViewer.renderer!==r)return;requestAnimationFrame(tick);ctl.update();r.render(s,c);}; tick();
+        }
+        function showMetizModel(url){
+            $('metiz-model-download').href=url; $('metiz-model-download').classList.remove('pointer-events-none','opacity-40'); $('metiz-model-download').setAttribute('aria-disabled','false');
+            $('metiz-model-message').textContent='Модель готова. Вращайте её мышью или касанием.'; loadMetizGLB(url);
+        }
+        function toggleMetizRotation(){metizViewer.autoRotate=!metizViewer.autoRotate;if(metizViewer.controls)metizViewer.controls.autoRotate=metizViewer.autoRotate;$('metiz-rotate').title=metizViewer.autoRotate?'Выключить вращение':'Включить вращение';$('metiz-rotate').setAttribute('aria-label',$('metiz-rotate').title);}
+        function resetMetizView(){if(metizViewer.modelUrl)loadMetizGLB(metizViewer.modelUrl);}
+        async function buildMetizModel(){
+            if(!metizSelected)return; const message=$('metiz-model-message'); message.textContent='Blender строит модель…';
+            try{const category=metizSelected.id==='angle_bracket'?'bracket':(metizMode==='bushings'?'bushing':'fastener');const result=await metizApi('/api/metiz/models/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,part_type:metizSelected.id,material:$('metiz-material').value,params:metizParams})}); showMetizModel(result.model.url); message.textContent='Модель построена в Blender 4.2.';}catch(e){message.textContent=e.message;}
+        }
+        async function saveMetizProject(){
+            if(!metizSelected)return;const name=prompt('Название проекта:',metizSelected.name);if(name===null)return;
+            const body={name:name.trim()||metizSelected.name,category:metizMode==='bushings'?'bushing':'fastener',part_type:metizSelected.id,material:$('metiz-material').value,params:metizParams,notes:''};
+
+            try{const path=metizProjectId?'/api/metiz/projects/'+encodeURIComponent(metizProjectId):'/api/metiz/projects';const result=await metizApi(path,{method:metizProjectId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});metizProjectId=result.project.id;alert('Проект сохранён');}
+            catch(e){alert('Не удалось сохранить: '+e.message);}
+        }
+        async function analyzeMetizPhotos(){
+            const files=Array.from($('metiz-photo-input').files||[]); if(!files.length){alert('Выберите от 1 до 5 фотографий.');return;} if(files.length>5){alert('Можно загрузить не больше пяти фотографий.');return;}
+            const status=$('metiz-photo-status'); status.textContent='AI анализирует фото…'; const form=new FormData(); files.forEach(file=>form.append('photos',file));
+            try{const response=await fetch('/api/metiz/ai/analyze',{method:'POST',body:form});const result=await response.json();if(!response.ok)throw new Error(result.detail||'Не удалось проанализировать фото');const a=result.analysis;if(a.model?.url){showMetizModel(a.model.url);$('metiz-model-message').textContent='Модель построена Blender. Распознанный тип: '+a.type+'; уверенность: '+Math.round(a.confidence*100)+'%.';status.textContent='Готово: модель создана. Неизвестные размеры: '+(a.unknown_dimensions||[]).join(', ');}else{status.textContent=(a.model_error||'Модель не создана')+'; тип: '+a.type;}}
+            catch(e){status.textContent=e.message;}
+        }
+        $('metiz-photo-analyze').addEventListener('click',analyzeMetizPhotos);
+
+        $('metiz-subnav').querySelectorAll('[data-workspace-category]').forEach(button=>button.addEventListener('click',()=>switchWorkspace(button.dataset.workspaceCategory)));
+        $('metiz-retry').addEventListener('click',()=>renderMetizWorkspace(metizMode));
+        $('metiz-rotate').addEventListener('click',toggleMetizRotation);
+        $('metiz-reset-view').addEventListener('click',resetMetizView);
+
+        $('metiz-search').addEventListener('input',drawMetizItems);$('metiz-project-refresh').addEventListener('click',()=>renderMetizWorkspace('projects'));$('metiz-save').addEventListener('click',saveMetizProject);$('metiz-build').addEventListener('click',buildMetizModel);
+
+        let draft = null, me = null;
+        function goStep(n) {
+            document.querySelectorAll('.wstep').forEach(e => e.classList.add('hidden'));
+            const el = $('ws-' + n);
+            el.classList.remove('hidden', 'step-in', 'shake'); void el.offsetWidth; el.classList.add('step-in');
+            if (n === 2) applyTheme(curTheme);
+        }
+        function showWelcome() {
+            $('welcome').classList.remove('hidden', 'leaving');
+            const p = getP();
+            if (p) { $('wb-name').textContent = p.name; goStep(0); } else goStep(1);
+        }
+        function doRegister() {
+            const n = $('reg-name').value.trim(), m = $('reg-mail').value.trim(), pw = $('reg-pass').value;
+            const msg = n.length < 2 ? 'Введите имя (минимум 2 символа)'
+                : !/^\S+@\S+\.\S+$/.test(m) ? 'Введите корректный email'
+                : pw.length < 6 ? 'Пароль — минимум 6 символов' : '';
+            $('reg-err').textContent = msg;
+            if (msg) { const c = $('ws-1'); c.classList.remove('step-in', 'shake'); void c.offsetWidth; c.classList.add('shake'); return; }
+            draft = { name: n, email: m }; $('reg-pass').value = ''; goStep(2);
+        }
+        function pickTheme(id) { applyTheme(id); }
+        function finishTheme() { me = { ...draft, theme: curTheme }; setP(me); launch(); }
+        function continueSaved() { me = getP(); applyTheme(me.theme); launch(); }
+        function launch() {
+            goStep(3);
+            const msgs = ['Загрузка 3D-движка…', 'Проверка ИИ-модели…', 'Подготовка рабочей области…'];
+            let i = 0;
+            const t = setInterval(() => { $('launch-msg').textContent = msgs[Math.min(++i, 2)]; }, 600);
+            setTimeout(() => {
+                clearInterval(t);
+                $('user-name').textContent = me.name;
+                $('user-ava').textContent = me.name[0].toUpperCase();
+                $('welcome').classList.add('leaving');
+                setTimeout(() => $('welcome').classList.add('hidden'), 700);
+            }, 1900);
+        }
+        function cycleTheme() {
+            const ids = Object.keys(THEMES);
+            applyTheme(ids[(ids.indexOf(curTheme) + 1) % ids.length]);
+            if (me) { me.theme = curTheme; setP(me); }
+        }
+        function logout() { setP(null); me = null; showWelcome(); }
+        function initWelcome() {
+            $('hero-spokes').innerHTML = Array.from({ length: 7 }, (_, i) =>
+                `<rect x="-5" y="-72" width="10" height="46" rx="5" transform="rotate(${i * 360 / 7})" style="fill:rgb(var(--a-500));opacity:.85"/>`).join('');
+            $('theme-grid').innerHTML = Object.entries(THEMES).map(([id, t]) =>
+                `<button data-t="${id}" onclick="pickTheme('${id}')" class="theme-card rounded-2xl border border-slate-800 p-3 text-left bg-slate-950/60">
+                    <div class="h-14 rounded-xl mb-2 relative overflow-hidden" style="background:${t.l ? '#e2e8f0' : '#0f172a'}">
+                        <b class="absolute left-2 top-2 w-6 h-6 rounded-full" style="background:rgb(${t.a[1]})"></b>
+                        <b class="absolute left-7 top-5 w-6 h-6 rounded-full" style="background:rgb(${t.e[1]})"></b>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-200">${t.n}</span></button>`).join('');
+            applyTheme(curTheme);
+            renderDesignCatalog();
+            showWelcome();
+        }
+
+        // Window Load Trigger
+        window.onload = function () {
+            initThree();
+            refreshAiStatus();
+            initWelcome();
+            updateFitment();
+        };
+    </script>
+<script>
+(() => {
+    const oldFetch = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+        const response = await oldFetch(...args);
+        const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+        if (url.includes('/api/predict')) {
+            const body = args[1]?.body;
+            const file = body instanceof FormData ? body.get('file') : null;
+            if (file instanceof File) {
+                const image = new Image();
+                image.onload = () => {
+                    const notes = [];
+                    if (image.width < 480 || image.height < 480) notes.push('Низкое разрешение: используйте фото крупнее 480 px по каждой стороне.');
+                    if (Math.max(image.width, image.height) / Math.min(image.width, image.height) > 2.2) notes.push('Очень вытянутый кадр: проверьте, что колпак полностью попал в кадр.');
+                    const box = document.getElementById('scan-result-panel');
+                    if (box) {
+                        const node = document.createElement('div');
+                        node.className = 'text-[10px] text-slate-400 border-t border-slate-800 pt-2';
+                        node.textContent = `Фото ${image.width}×${image.height}px` + (notes.length ? ' · ' + notes.join(' ') : ' · размер кадра подходит для анализа');
+                        box.appendChild(node);
+                    }
+                    URL.revokeObjectURL(image.src);
+                };
+                image.src = URL.createObjectURL(file);
+            }
+        }
+        return response;
+    };
+})();
+</script>
+
+
+<script>
+(() => {
+    let scanParams = null;
+    const oldFetch = window.fetch.bind(window);
+    const esc = value => String(value ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+    function panel() {
+        let el = document.getElementById('scan-result-panel');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'scan-result-panel';
+            el.className = 'mt-3 p-3 rounded-xl border border-slate-800 bg-slate-950 text-left space-y-2';
+            document.getElementById('tab-content-2').appendChild(el);
+        }
+        return el;
+    }
+    function applyControls(p) {
+        scanParams = {...p};
+        const values = {'param-bore': p.center_hole_diameter_mm, 'param-spokes': p.spoke_count, 'param-depth': p.bulge_depth_mm};
+        Object.entries(values).forEach(([id, value]) => { const input = document.getElementById(id); if (input && Number.isFinite(Number(value))) input.value = value; });
+        const designMap = {classic:'classic', v_shaped:'vortex', split:'split', y_shaped:'y-spoke', mesh:'mesh'};
+        if (p.family && typeof setWheelDesign === 'function') setWheelDesign(designMap[p.family] || p.family);
+        if (typeof applyingScan !== 'undefined') applyingScan = true;
+        if (typeof updateParameters === 'function') updateParameters();
+        if (typeof applyingScan !== 'undefined') applyingScan = false;
+    }
+    function render(data) {
+        const p = data.parameters || data.geometry || {};
+        applyControls(p);
+        const confidence = data.confidence || {};
+        const choices = Object.entries(confidence).map(([key, value]) => {
+            const target = ({family: 'family', spoke_count: 'spoke_count', center: 'center_type', finish: 'finish'})[key];
+            const alternatives = (value.top3 || []).slice(0, 3).map(item => `<button type="button" data-choice-key="${target}" data-choice-value="${esc(item.label)}" class="mr-1 mb-1 rounded border border-slate-700 px-1.5 py-0.5 hover:border-blue-400">${esc(item.label)} ${Math.round(Number(item.score || 0) * 100)}%</button>`).join('');
+            return `<div><span class="text-slate-500">${esc(key)}:</span> ${alternatives}</div>`;
+        }).join('');
+        const warning = data.warning || 'Проверьте модель по фотографии перед использованием.';
+        panel().innerHTML = `<div class="flex items-center justify-between gap-2"><b class="text-xs text-slate-200">Результат распознавания</b><button id="scan-rebuild" class="px-2 py-1 rounded-lg bg-emerald-600 text-[11px] text-white">Перестроить</button></div><div class="text-[11px] text-amber-300">${esc(warning)}</div><div class="text-[10px] leading-4 text-slate-400">${choices}</div><div class="grid grid-cols-2 gap-2 text-[10px]">${[['family','Семейство',['classic','v_shaped','split','y_shaped','mesh']],['center_type','Центр',['open','cap']],['finish','Отделка',['solid_silver','solid_black','diamond_cut']],['design_variant','Форма спицы',['straight','swept','wide','slim','angular','turbine','petal','concave']]].map(([key,label,opts])=>`<label class="text-slate-400">${label}<select data-scan-param="${key}" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">${opts.map(v=>`<option value="${v}" ${p[key]===v?'selected':''}>${v}</option>`).join('')}</select></label>`).join('')}${[['spoke_count','Спицы',5,24,1],['center_hole_diameter_mm','ЦО, мм',50,74,1],['bulge_depth_mm','Выпуклость, мм',8,50,1],['spoke_width_scale','Ширина спиц',0.55,1.65,0.05],['spoke_sweep_deg','Изгиб, град.',-22,22,1],['spoke_mid_radius_ratio','Положение середины',0.40,0.70,0.01],['spoke_outer_radius_ratio','Длина спиц',0.76,0.89,0.01],['outer_diameter_mm','Наружный диаметр, мм',330,460,1]].map(([key,label,min,max,step])=>`<label class="text-slate-400">${label}<input data-scan-param="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${esc(p[key] ?? '')}" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200"></label>`).join('')}</div><div id="scan-rebuild-status" class="text-[11px] text-slate-400"></div>`;
+        panel().querySelectorAll('[data-choice-key]').forEach(button => button.addEventListener('click', () => { scanParams[button.dataset.choiceKey] = button.dataset.choiceValue; render({parameters: scanParams, confidence, warning: 'Вариант выбран вручную. Проверьте остальные параметры и перестройте модель.'}); }));
+        panel().querySelectorAll('[data-scan-param]').forEach(input => input.addEventListener('change', () => { const key = input.dataset.scanParam; scanParams[key] = input.tagName === 'SELECT' ? input.value : Number(input.value); if (!Number.isFinite(scanParams[key]) && input.tagName !== 'SELECT') input.setCustomValidity('Введите число'); else input.setCustomValidity(''); }));
+        document.getElementById('scan-rebuild').onclick = async () => {
+            const status = document.getElementById('scan-rebuild-status');
+            status.textContent = 'Blender строит модель по исправленным параметрам...';
+            try {
+                const response = await oldFetch('/api/hubcaps/generate', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({params: scanParams})});
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || 'Не удалось построить модель');
+                status.innerHTML = `Готово: GLB проверен (${Math.round((result.model.size_bytes || 0) / 1024)} КБ). <a class="text-emerald-400" href="${esc(result.model.url)}" download>Скачать GLB</a>`;
+            } catch (error) { status.textContent = error.message; }
+        };
+    }
+    window.fetch = async (...args) => {
+        const response = await oldFetch(...args);
+        const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+        if (url.includes('/api/predict')) {
+            response.clone().json().then(render).catch(() => {});
+        }
+        return response;
+    };
+})();
+</script>
+
+</body>
+</html>
