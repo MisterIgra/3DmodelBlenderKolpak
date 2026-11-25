@@ -1,3 +1,4 @@
+
 """AI-сервис AutoKolpak: распознавание колпака по фото через Claude API (без локальной нейросети).
 
 Настройки берутся из переменных окружения или из файла .env в корне проекта:
@@ -43,6 +44,22 @@ MAX_SIDE = 1568
 
 
 class ModelNotConfigured(RuntimeError):
+    pass
+
+
+class AIUpstreamError(RuntimeError):
+    """An upstream API responded, but did not accept the request."""
+
+    def __init__(self, message: str, status_code: int = 502):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class AIServiceUnavailable(ModelNotConfigured):
+    """The configured upstream cannot be reached or credentials are absent."""
+
+    status_code = 503
+
     pass
 
 
@@ -183,11 +200,16 @@ class AIService:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:300]
+            message = f"Upstream API вернул HTTP {exc.code}: {detail}"
             if exc.code in (401, 403):
-                raise ModelNotConfigured(f"API отклонил ключ (HTTP {exc.code}). Проверьте ANTHROPIC_AUTH_TOKEN. {detail}")
-            raise ModelNotConfigured(f"Ошибка API: HTTP {exc.code}. {detail}")
+                raise AIUpstreamError(f"{message} Проверьте ключ и доступ к модели.", 502) from exc
+            if exc.code == 429:
+                raise AIUpstreamError(f"{message} Проверьте лимит запросов или баланс аккаунта.", 429) from exc
+            if exc.code >= 500:
+                raise AIServiceUnavailable(message) from exc
+            raise AIUpstreamError(message, 502) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise ModelNotConfigured(f"Не удалось связаться с API {self.base_url}: {exc}")
+            raise AIServiceUnavailable(f"Не удалось связаться с API {self.base_url}: {exc}") from exc
         parts = [b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"]
         text = "".join(parts).strip()
         if not text:

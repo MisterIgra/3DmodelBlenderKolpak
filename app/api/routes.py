@@ -7,7 +7,7 @@ from PIL import Image, UnidentifiedImageError
 from app.metizlab.blender_service import BlenderUnavailable, generate_model
 from app.metizlab.cad.catalog import BUSHINGS, FASTENERS, normalize_params
 from app.metizlab.config import get_settings
-from app.services.ai_service import AIService, ModelNotConfigured
+from app.services.ai_service import AIService, AIServiceUnavailable, AIUpstreamError, ModelNotConfigured
 
 router = APIRouter(prefix="/api")
 ai_service = AIService()
@@ -153,6 +153,11 @@ async def predict(
             return {**analysis, "success": True, "analysis": analysis, "model": model}
         except (BlenderUnavailable, RuntimeError) as exc:
             return {**analysis, "success": True, "analysis": analysis, "model_error": str(exc)}
+    except AIUpstreamError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+    except AIServiceUnavailable as exc:
+        raise HTTPException(503, str(exc)) from exc
+
     except ModelNotConfigured as exc:
         raise HTTPException(503, str(exc))
     except ValueError as exc:
