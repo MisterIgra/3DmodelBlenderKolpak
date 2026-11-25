@@ -89,12 +89,12 @@ def model_info():
 @router.post("/predict")
 async def predict(
     file: UploadFile = File(...),
-    reference_outer_diameter_mm: float | None = Form(default=None, ge=330, le=460),
-    face_thickness_mm: float | None = Form(default=None, ge=5, le=11),
-    bulge_depth_mm: float | None = Form(default=None, ge=8, le=50),
-    rim_depth_mm: float | None = Form(default=None, ge=90, le=170),
-    center_hole_diameter_mm: float | None = Form(default=None, ge=50, le=74),
-    bolt_count: int | None = Form(default=None, ge=3, le=8),
+    reference_outer_diameter_mm: float | None = Form(default=None),
+    face_thickness_mm: float | None = Form(default=None),
+    bulge_depth_mm: float | None = Form(default=None),
+    rim_depth_mm: float | None = Form(default=None),
+    center_hole_diameter_mm: float | None = Form(default=None),
+    bolt_count: int | None = Form(default=None),
 ):
     if not file.filename:
         raise HTTPException(400, "Не указано имя файла")
@@ -114,8 +114,22 @@ async def predict(
     except (Image.DecompressionBombError, Image.DecompressionBombWarning, UnidentifiedImageError, OSError):
         raise HTTPException(400, "Файл не является корректным изображением")
     try:
-        if any(value is None for value in (reference_outer_diameter_mm, face_thickness_mm, bulge_depth_mm, rim_depth_mm, center_hole_diameter_mm, bolt_count)):
-            raise HTTPException(422, "Введите все размеры пользователя: наружный диаметр, ЦО, толщину, выпуклость, глубину обода и число креплений")
+        required_dimensions = {
+            "Наружный диаметр": (reference_outer_diameter_mm, 330, 460),
+            "Толщина": (face_thickness_mm, 5, 11),
+            "Выпуклость": (bulge_depth_mm, 8, 50),
+            "Глубина обода": (rim_depth_mm, 90, 170),
+            "Центральное отверстие": (center_hole_diameter_mm, 50, 74),
+            "Количество креплений": (bolt_count, 3, 8),
+        }
+        missing = [name for name, (value, _low, _high) in required_dimensions.items() if value is None]
+        if missing:
+            raise HTTPException(422, "Не заполнены размеры: " + ", ".join(missing) + ".")
+        invalid = [(name, value, low, high) for name, (value, low, high) in required_dimensions.items() if not low <= value <= high]
+        if invalid:
+            name, value, low, high = invalid[0]
+            unit = " шт" if name == "Количество креплений" else " мм"
+            raise HTTPException(422, f"{name}: значение {value}{unit} вне диапазона {low}–{high}{unit}.")
         analysis = ai_service.predict_image(data, file.filename, file.content_type, None)
         parameters = dict(analysis["parameters"])
         parameters.update({
