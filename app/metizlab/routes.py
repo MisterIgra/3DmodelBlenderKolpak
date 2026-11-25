@@ -125,13 +125,23 @@ async def ai_analyze(photos: list[UploadFile] = File(...), reference_mm: float |
         raise HTTPException(status_code=422, detail="Контрольный размер должен быть от 0 до 10000 мм")
     try:
         analysis = await analyze_images(settings, images, reference_mm, extra_notes)
-        try:
-            analysis["model"] = await generate_model(settings, {
-                "category": analysis["category"], "part_type": analysis["type"],
-                "material": analysis.get("material", "steel"), "params": analysis["params"],
-            })
-        except BlenderUnavailable as exc:
-            analysis["model_error"] = str(exc)
+        # Never generate a plausible-looking part from catalog defaults when the
+        # photo did not provide the dimensions needed to reproduce it.
+        analysis["photo_reconstruction"] = True
+        if analysis.get("unknown_dimensions"):
+            analysis["model_error"] = (
+                "Модель не построена: укажите неизвестные размеры в редакторе и нажмите «Построить 3D». "
+                + " Неизвестно: " + ", ".join(analysis["unknown_dimensions"])
+            )
+        else:
+            try:
+                analysis["model"] = await generate_model(settings, {
+                    "category": analysis["category"], "part_type": analysis["type"],
+                    "material": analysis.get("material", "steel"),
+                    "params": {**analysis["params"], "photo_reconstruction": True},
+                })
+            except BlenderUnavailable as exc:
+                analysis["model_error"] = str(exc)
         return {"success": True, "analysis": analysis}
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
