@@ -254,10 +254,15 @@
                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">AI-сканер геометрии</h2>
                 <p id="ai-status" class="text-[11px] text-slate-400">Проверка состояния модели…</p>
                 <div class="space-y-1">
-                    <label for="ref-diam" class="text-[11px] text-slate-400">Наружный диаметр диска, мм (330–460) — нужен, чтобы получить размеры в мм</label>
-                    <input id="ref-diam" type="number" min="330" max="460" step="1" placeholder="например, 380"
-                           onchange="if (lastScanFile) runScan(lastScanFile)"
-                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                    <p class="text-[11px] text-amber-300">AI определяет только форму по фотографии. Все размеры для 3D-модели вводятся пользователем.</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="text-[10px] text-slate-400">Наружный диаметр, мм<input id="ref-diam" required type="number" min="330" max="460" step="1" placeholder="430" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"></label>
+                        <label class="text-[10px] text-slate-400">Толщина, мм<input id="scan-face-thickness" required type="number" min="5" max="11" step="0.1" placeholder="7" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"></label>
+                        <label class="text-[10px] text-slate-400">Выпуклость, мм<input id="scan-bulge-depth" required type="number" min="8" max="50" step="1" placeholder="18" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"></label>
+                        <label class="text-[10px] text-slate-400">Глубина обода, мм<input id="scan-rim-depth" required type="number" min="90" max="170" step="1" placeholder="120" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"></label>
+                        <label class="text-[10px] text-slate-400">Центральное отверстие, мм<input id="scan-center-hole" type="number" min="50" max="74" step="1" placeholder="60" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"></label>
+                        <label class="text-[10px] text-slate-400">Крепления, шт<input id="scan-bolt-count" required type="number" min="3" max="8" step="1" placeholder="5" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200"></label>
+                    </div>
                 </div>
                 <div class="border-2 border-dashed border-slate-700 rounded-2xl p-6 text-center bg-slate-950/40">
                     <input type="file" id="scanner-input" accept="image/*" class="hidden" onchange="handleImageScan(event)">
@@ -1119,7 +1124,15 @@
             try {
                 const form = new FormData();
                 form.append('file', file);
-                if (diam !== null) form.append('reference_outer_diameter_mm', String(diam));
+                const userDimensions = {
+                    reference_outer_diameter_mm: diam,
+                    face_thickness_mm: Number(document.getElementById('scan-face-thickness').value),
+                    bulge_depth_mm: Number(document.getElementById('scan-bulge-depth').value),
+                    rim_depth_mm: Number(document.getElementById('scan-rim-depth').value),
+                    center_hole_diameter_mm: Number(document.getElementById('scan-center-hole').value || 60),
+                    bolt_count: Number(document.getElementById('scan-bolt-count').value),
+                };
+                Object.entries(userDimensions).forEach(([key, value]) => { if (value !== null && Number.isFinite(value)) form.append(key, String(value)); });
                 const response = await fetch('/api/predict', { method: 'POST', body: form });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(errText(data, response.status));

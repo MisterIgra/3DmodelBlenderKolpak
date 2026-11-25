@@ -204,15 +204,24 @@ def _add_spokes(p, rng, radius, bore_r, face_mat, accent_mat):
     half_root *= width_scale
     half_mid *= width_scale
     half_tip *= width_scale
+    base_half_root, base_half_mid, base_half_tip = half_root, half_mid, half_tip
 
+    profiles = p.get("spoke_profiles") if isinstance(p.get("spoke_profiles"), list) else []
     for i in range(root_count):
-        # A tiny per-root jitter prevents an overly CAD-perfect look but is reproducible from seed.
-        a = 2.0 * math.pi * i / root_count + rng.uniform(-0.006, 0.006)
-        local_sweep = sweep * sweep_factor + rng.uniform(-0.025, 0.025)
+        # Use per-spoke polar profiles from the photo when available; fall back to
+        # the relative sweep for older requests and synthetic dataset rows.
+        profile = profiles[i % len(profiles)] if profiles else {}
+        profile_angle = math.radians(float(profile.get("root_angle_deg", 360.0 * i / root_count)))
+        a = profile_angle + rng.uniform(-0.006, 0.006)
+        profile_width = float(profile.get("width_scale", 1.0))
+        half_root, half_mid, half_tip = (base_half_root * profile_width, base_half_mid * profile_width, base_half_tip * profile_width)
+        profile_mid = math.radians(float(profile.get("mid_offset_deg", math.degrees(sweep * 0.45))))
+        profile_outer = math.radians(float(profile.get("outer_offset_deg", math.degrees(sweep))))
+        local_sweep = profile_outer * sweep_factor + rng.uniform(-0.025, 0.025)
         accent = accent_mat if p["finish"] == "diamond_cut" and i % 2 == 0 else face_mat
 
         if family == "classic":
-            path = _path(root_r, mid_r, outer_r, a, local_sweep * 0.45, local_sweep)
+            path = _path(root_r, mid_r, outer_r, a, profile_mid, local_sweep)
             _spoke_prism(f"Spoke_{i:02d}", path,
                 [half_root, half_mid, half_tip], [z_root, z_mid, z_tip],
                 thickness, accent, bevel)

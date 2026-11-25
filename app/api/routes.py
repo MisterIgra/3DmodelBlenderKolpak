@@ -87,7 +87,15 @@ def model_info():
 
 
 @router.post("/predict")
-async def predict(file: UploadFile = File(...), reference_outer_diameter_mm: float | None = Form(default=None, ge=330, le=460)):
+async def predict(
+    file: UploadFile = File(...),
+    reference_outer_diameter_mm: float | None = Form(default=None, ge=330, le=460),
+    face_thickness_mm: float | None = Form(default=None, ge=5, le=11),
+    bulge_depth_mm: float | None = Form(default=None, ge=8, le=50),
+    rim_depth_mm: float | None = Form(default=None, ge=90, le=170),
+    center_hole_diameter_mm: float | None = Form(default=None, ge=50, le=74),
+    bolt_count: int | None = Form(default=None, ge=3, le=8),
+):
     if not file.filename:
         raise HTTPException(400, "Не указано имя файла")
     data = await file.read(MAX_UPLOAD_BYTES + 1)
@@ -106,8 +114,21 @@ async def predict(file: UploadFile = File(...), reference_outer_diameter_mm: flo
     except (Image.DecompressionBombError, Image.DecompressionBombWarning, UnidentifiedImageError, OSError):
         raise HTTPException(400, "Файл не является корректным изображением")
     try:
-        analysis = ai_service.predict_image(data, file.filename, file.content_type, reference_outer_diameter_mm)
-        parameters = analysis["parameters"]
+        if any(value is None for value in (reference_outer_diameter_mm, face_thickness_mm, bulge_depth_mm, rim_depth_mm, center_hole_diameter_mm, bolt_count)):
+            raise HTTPException(422, "Введите все размеры пользователя: наружный диаметр, ЦО, толщину, выпуклость, глубину обода и число креплений")
+        analysis = ai_service.predict_image(data, file.filename, file.content_type, None)
+        parameters = dict(analysis["parameters"])
+        parameters.update({
+            "outer_diameter_mm": reference_outer_diameter_mm,
+            "face_thickness_mm": face_thickness_mm,
+            "bulge_depth_mm": bulge_depth_mm,
+            "rim_depth_mm": rim_depth_mm,
+            "center_hole_diameter_mm": center_hole_diameter_mm,
+            "bolt_count": bolt_count,
+        })
+        analysis["parameters"] = parameters
+        analysis["geometry"] = {**analysis.get("geometry", {}), **parameters, "units": "mm", "source": "user_dimensions"}
+        analysis["warning"] = "Форма определена по фото. Все физические размеры введены пользователем."
         try:
             model = await generate_model(blender_settings, {
                 "category": "hubcap",

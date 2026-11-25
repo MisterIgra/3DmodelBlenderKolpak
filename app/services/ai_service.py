@@ -74,7 +74,10 @@ PROMPT = f"""Ты — модуль компьютерного зрения дл�
     "spoke_mid_radius_ratio": <число 0.40-0.70>,
     "spoke_outer_radius_ratio": <число 0.76-0.89>,
     "rim_lip_scale": <число 0.65-1.45>,
-    "hole_radius_scale": <число 0.70-1.35>
+    "hole_radius_scale": <число 0.70-1.35>,
+    "spoke_profiles": [
+      {{"root_angle_deg": <0-360>, "mid_offset_deg": <-30..30>, "outer_offset_deg": <-30..30>, "width_scale": <0.55-1.65>}}
+    ]
   }}
 }},
 
@@ -100,7 +103,7 @@ PROMPT = f"""Ты — модуль компьютерного зрения дл�
 5. Для split/Y/V каждый внешний конец считается отдельно. Если 5 корней раздваиваются и дают 10 внешних концов, верни 10.
 6. Выполни два независимых прохода: по часовой стрелке и через противоположные сектора. Если результаты различаются, выбери наиболее вероятное симметричное значение и снизь score.
 7. Не путай количество внешних концов с количеством корней, отверстий или лепестков центральной крышки.
-Оценки score — относительные вероятности от 0 до 1 (в сумме по каждому списку не больше 1). Если глубину по фото оценить трудно, дай наиболее вероятное значение в допустимом диапазоне.
+Оценки score — относительные вероятности от 0 до 1 (в сумме по каждому списку не больше 1). Не определяй физические размеры в миллиметрах: размеры вводит пользователь отдельно. Возвращай только относительные пропорции формы и признаки рисунка.
 Если на фото нет автомобильного колпака, верни {{"error": "краткая причина по-русски"}}."""
 
 
@@ -293,6 +296,23 @@ class AIService:
         design_variant = shape_raw.get("design_variant", "straight")
         if design_variant not in DESIGN_VARIANTS:
             design_variant = "straight"
+        profiles_raw = shape_raw.get("spoke_profiles") if isinstance(shape_raw.get("spoke_profiles"), list) else []
+        spoke_profiles = []
+        for index, item in enumerate(profiles_raw[:24]):
+            if not isinstance(item, dict):
+                continue
+            try:
+                angle = float(item.get("root_angle_deg", index * 360.0 / max(1, len(profiles_raw))))
+                mid_offset = float(item.get("mid_offset_deg", 0.0))
+                outer_offset = float(item.get("outer_offset_deg", 0.0))
+                width = float(item.get("width_scale", 1.0))
+            except (TypeError, ValueError):
+                continue
+            spoke_profiles.append({"root_angle_deg": angle % 360.0, "mid_offset_deg": max(-30.0, min(30.0, mid_offset)), "outer_offset_deg": max(-30.0, min(30.0, outer_offset)), "width_scale": max(0.55, min(1.65, width))})
+        if not spoke_profiles:
+            spoke_profiles = [{"root_angle_deg": i * 360.0 / int(spokes), "mid_offset_deg": shape["spoke_sweep_deg"] * 0.45, "outer_offset_deg": shape["spoke_sweep_deg"], "width_scale": shape["spoke_width_scale"]} for i in range(int(spokes))]
+
+
 
         hidden = "Диаметр центрального отверстия скрыт декоративной крышкой и не выдаётся. " if center == "cap" else ""
         warning = (
@@ -315,6 +335,8 @@ class AIService:
                 "face_thickness_mm": dimensions["face_thickness_mm"],
                 "rim_depth_mm": dimensions["rim_depth_mm"],
                 "geometry_ratios": ratio_values,
+                "spoke_profiles": spoke_profiles,
+
                 "units": "mm",
                 "family": family,
                 "spoke_count": int(spokes),
@@ -331,5 +353,5 @@ class AIService:
             "reference_outer_diameter_mm": known,
             "units": "mm for parameters; unitless ratios for geometry_ratios",
             "confidence_interpretation": "Scores are the model's self-reported relative confidence, not calibrated probabilities.",
-            "warning": warning,
+            "warning": "Форма и относительные пропорции определены по фото; физические размеры не определяются AI и должны быть введены пользователем.",
         }
