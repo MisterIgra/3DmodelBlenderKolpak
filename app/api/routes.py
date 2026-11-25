@@ -134,7 +134,7 @@ async def predict(
                 "category": "hubcap",
                 "part_type": "hubcap",
                 "material": "steel",
-                "params": parameters,
+                "params": {**parameters, "photo_reconstruction": True},
             })
             return {**analysis, "success": True, "analysis": analysis, "model": model}
         except (BlenderUnavailable, RuntimeError) as exc:

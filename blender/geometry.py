@@ -157,121 +157,37 @@ def _path(root_r, mid_r, outer_r, root_angle, mid_offset, outer_offset):
 
 
 def _add_spokes(p, rng, radius, bore_r, face_mat, accent_mat):
-    """Create real, volumetric spokes whose visible tip count matches metadata."""
-    family = p["family"]
-    root_count = int(p.get("spoke_roots_count", p["spoke_count"]))
-    variant = p.get("design_variant", "straight")
+    """Build spokes only from the photo-derived profile; no family templates."""
+    root_count = max(1, int(p.get("spoke_roots_count", p["spoke_count"])))
     width_scale = float(p.get("spoke_width_scale", 1.0))
     sweep = math.radians(float(p.get("spoke_sweep_deg", 0.0)))
     mid_ratio = float(p.get("spoke_mid_radius_ratio", 0.53))
     outer_ratio = float(p.get("spoke_outer_radius_ratio", 0.82))
-
-    # Variants affect actual geometry, not just the label.
-    variant_factors = {
-        "straight": (0.65, 1.08, -0.015),
-        "swept": (1.35, 0.92, 0.010),
-        "wide": (0.72, 1.35, -0.025),
-        "slim": (1.12, 0.66, 0.025),
-        "angular": (1.65, 0.94, -0.005),
-        "turbine": (2.00, 0.84, 0.040),
-        "petal": (0.82, 1.24, 0.015),
-        "concave": (1.10, 0.91, 0.030),
-    }
-    sweep_factor, variant_width, mid_adjust = variant_factors.get(variant, (1.0, 1.0, 0.0))
-    width_scale *= variant_width
     root_r = max(bore_r * 1.55, radius * 0.19)
     outer_r = radius * max(0.76, min(0.89, outer_ratio))
-    mid_r = radius * max(0.40, min(0.70, mid_ratio + mid_adjust))
+    mid_r = radius * max(0.40, min(0.70, mid_ratio))
     mid_r = max(root_r + radius * 0.09, min(mid_r, outer_r - radius * 0.10))
-    # Labelled face thickness is the real vertical thickness of each spoke.
     thickness = max(0.0045, float(p["face_thickness_mm"]) / 1000.0)
     bevel = min(radius * 0.009, thickness * 0.28)
     bulge = float(p["bulge_depth_mm"]) / 1000.0
     z_root = radius * 0.11 + bulge
     z_mid = radius * 0.095 + bulge * 0.70
     z_tip = radius * 0.075 + bulge * 0.30
-
-    if family == "mesh":
-        half_root, half_mid, half_tip = (radius * 0.012, radius * 0.018, radius * 0.014)
-    elif family == "split":
-        half_root, half_mid, half_tip = (radius * 0.021, radius * 0.025, radius * 0.019)
-    elif family == "y_shaped":
-        half_root, half_mid, half_tip = (radius * 0.038, radius * 0.036, radius * 0.022)
-    elif family == "v_shaped":
-        half_root, half_mid, half_tip = (radius * 0.035, radius * 0.033, radius * 0.020)
-    else:
-        half_root, half_mid, half_tip = (radius * 0.032, radius * 0.042, radius * 0.029)
-    half_root *= width_scale
-    half_mid *= width_scale
-    half_tip *= width_scale
-    base_half_root, base_half_mid, base_half_tip = half_root, half_mid, half_tip
-
+    base_widths = [radius * 0.032 * width_scale, radius * 0.042 * width_scale, radius * 0.029 * width_scale]
     profiles = p.get("spoke_profiles") if isinstance(p.get("spoke_profiles"), list) else []
+
     for i in range(root_count):
-        # Use per-spoke polar profiles from the photo when available; fall back to
-        # the relative sweep for older requests and synthetic dataset rows.
         profile = profiles[i % len(profiles)] if profiles else {}
-        profile_angle = math.radians(float(profile.get("root_angle_deg", 360.0 * i / root_count)))
-        a = profile_angle + rng.uniform(-0.006, 0.006)
-        profile_width = float(profile.get("width_scale", 1.0))
-        half_root, half_mid, half_tip = (base_half_root * profile_width, base_half_mid * profile_width, base_half_tip * profile_width)
-        profile_mid = math.radians(float(profile.get("mid_offset_deg", math.degrees(sweep * 0.45))))
-        profile_outer = math.radians(float(profile.get("outer_offset_deg", math.degrees(sweep))))
-        local_sweep = profile_outer * sweep_factor + rng.uniform(-0.025, 0.025)
+        angle = math.radians(float(profile.get("root_angle_deg", 360.0 * i / root_count)))
+        angle += rng.uniform(-0.006, 0.006)
+        profile_width = max(0.55, min(1.65, float(profile.get("width_scale", 1.0))))
+        half_widths = [value * profile_width for value in base_widths]
+        mid_offset = math.radians(float(profile.get("mid_offset_deg", math.degrees(sweep * 0.45))))
+        outer_offset = math.radians(float(profile.get("outer_offset_deg", math.degrees(sweep))))
+        path = _path(root_r, mid_r, outer_r, angle, mid_offset, outer_offset)
         accent = accent_mat if p["finish"] == "diamond_cut" and i % 2 == 0 else face_mat
-
-        if family == "classic":
-            path = _path(root_r, mid_r, outer_r, a, profile_mid, local_sweep)
-            _spoke_prism(f"Spoke_{i:02d}", path,
-                [half_root, half_mid, half_tip], [z_root, z_mid, z_tip],
-                thickness, accent, bevel)
-
-        elif family == "v_shaped":
-            fork_r = radius * max(0.36, min(0.49, mid_ratio - 0.035))
-            _spoke_prism(f"V_Root_{i:02d}", [(root_r, a), (fork_r, a)],
-                [radius * 0.034 * width_scale, radius * 0.045 * width_scale],
-                [z_root, z_mid], thickness, face_mat, bevel)
-            fork_angle = math.radians(rng.uniform(3.7, 6.2))
-            for side in (-1, 1):
-                path = [(fork_r * 0.98, a + side * 0.008),
-                        (radius * 0.62, a + side * fork_angle * 0.56 + local_sweep * 0.25),
-                        (outer_r, a + side * fork_angle + local_sweep)]
-                _spoke_prism(f"V_Arm_{i:02d}_{side}", path,
-                    [radius*0.022*width_scale, radius*0.021*width_scale, half_tip],
-                    [z_mid, (z_mid+z_tip)*0.5, z_tip], thickness*0.92,
-                    accent if side == 1 else face_mat, bevel*0.72)
-
-        elif family == "split":
-            split_angle = math.radians(rng.uniform(1.5, 3.0))
-            for side in (-1, 1):
-                path = _path(root_r, mid_r, outer_r, a + side*split_angle,
-                             local_sweep*0.32, local_sweep + side*split_angle*0.35)
-                _spoke_prism(f"Split_Spoke_{i:02d}_{side}", path,
-                    [radius*0.020*width_scale, radius*0.025*width_scale, half_tip],
-                    [z_root, z_mid, z_tip], thickness,
-                    accent if side == 1 else face_mat, bevel*0.8)
-
-        elif family == "y_shaped":
-            fork_r = radius * rng.uniform(0.39, 0.47)
-            _spoke_prism(f"Y_Trunk_{i:02d}",
-                [(root_r, a), (radius*0.31, a), (fork_r, a + local_sweep*0.25)],
-                [radius*0.038*width_scale, radius*0.047*width_scale, radius*0.042*width_scale],
-                [z_root, z_root*0.92, z_mid], thickness, face_mat, bevel)
-            fork_angle = math.radians(rng.uniform(4.3, 7.0))
-            for side in (-1, 1):
-                path = [(fork_r*0.96, a + local_sweep*0.25),
-                        (radius*0.62, a + side*fork_angle*0.55 + local_sweep*0.5),
-                        (outer_r, a + side*fork_angle + local_sweep)]
-                _spoke_prism(f"Y_Branch_{i:02d}_{side}", path,
-                    [radius*0.031*width_scale, radius*0.025*width_scale, half_tip],
-                    [z_mid, (z_mid+z_tip)*0.5, z_tip], thickness*0.92,
-                    accent if side == 1 else face_mat, bevel*0.7)
-
-        else:  # dense, narrow multi-spoke face
-            path = _path(root_r, mid_r, outer_r, a, local_sweep*0.5, local_sweep)
-            _spoke_prism(f"Mesh_Spoke_{i:02d}", path,
-                [half_root, half_mid, half_tip], [z_root*0.92, z_mid*0.92, z_tip*0.95],
-                thickness*0.82, accent, bevel*0.55)
+        _spoke_prism(f"Photo_Spoke_{i:02d}", path, half_widths,
+                     [z_root, z_mid, z_tip], thickness, accent, bevel)
 
 def make_hubcap(p, rng):
     """Generate a 3D alloy-wheel face and barrel in Blender metres.

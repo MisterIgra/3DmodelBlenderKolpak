@@ -258,6 +258,10 @@ def main():
         for key, value in defaults.items():
             if p.get(key) is None:
                 p[key] = value
+        if p.get("photo_reconstruction") and not isinstance(p.get("spoke_profiles"), list):
+            raise ValueError("Фото-реконструкция требует индивидуальные spoke_profiles; шаблонная геометрия отключена")
+        if p.get("photo_reconstruction") and not p["spoke_profiles"]:
+            raise ValueError("Фото-реконструкция получила пустые spoke_profiles; шаблонная геометрия отключена")
         # In the interactive editor, spoke_count means visible tips; branch styles use two tips/root.
         if p.get("spoke_count") is not None:
             p["spoke_roots_count"] = max(1, int(p["spoke_count"]) // (2 if p.get("family") in {"split", "v_shaped", "y_shaped"} else 1))

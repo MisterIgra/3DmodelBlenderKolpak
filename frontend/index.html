@@ -695,147 +695,42 @@
             if (renderer && scene && camera) renderer.render(scene, camera);
         }
 
-        function buildLegacyWheelHubcap() {
-            if (!scene) return;
-            // Always replace the previous preview; never layer an AI result on top of it.
-            clearHubcapModel();
-            hubcapGroup = new THREE.Group();
-            hubcapGroup.name = 'AI_Parametric_Hubcap';
-            const g = scannedGeometry;
-            const radius = Number(g.outer_diameter_mm) / 2 || Number(document.getElementById('param-radius').value) * 12.7;
-            const ratios = g.geometry_ratios || geometryRatios || {};
-            const bore = Number(g.center_hole_diameter_mm) || Number(ratios.center_hole_ratio) * radius * 2 || radius * 0.15;
-            const depth = Number(g.bulge_depth_mm) || Number(ratios.bulge_depth_ratio) * radius * 2 || Number(document.getElementById('param-depth').value);
-            const faceThickness = Number(g.face_thickness_mm) || Number(ratios.face_thickness_ratio) * radius * 2 || 7;
-            const rimDepth = Number(g.rim_depth_mm) || Number(ratios.rim_depth_ratio) * radius * 2 || 120;
-            const spokes = Math.max(5, Math.min(24, Number(g.spoke_count) || Number(document.getElementById('param-spokes').value)));
-            const family = g.family || 'classic';
-            // UI units are centimetres-like display units; geometry values remain millimetres.
-            const scale = 0.075;
-            const mat = materials[currentMaterialType];
-            const radial = (value, angle, z) => new THREE.Vector3(value * scale * Math.cos(angle), value * scale * Math.sin(angle), z * scale);
-            const addBar = (a, b, width, z, angleOffset = 0) => {
-                const mid = a.clone().add(b).multiplyScalar(0.5);
-                const length = a.distanceTo(b);
-                const shape = new THREE.Shape();
-                const half = Math.max(1.5, width) * scale / 2;
-                shape.moveTo(-length / 2, -half);
-                shape.lineTo(length / 2, -half * 0.72);
-                shape.lineTo(length / 2, half * 0.72);
-                shape.lineTo(-length / 2, half);
-                shape.closePath();
-                const geometry = new THREE.ExtrudeGeometry(shape, { depth: Math.max(2, faceThickness * 1.5) * scale, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.035, bevelThickness: 0.035 });
-                const bar = new THREE.Mesh(geometry, mat);
-                bar.position.set(mid.x, mid.y, z * scale);
-                bar.rotation.z = Math.atan2(b.y - a.y, b.x - a.x) + angleOffset;
-                hubcapGroup.add(bar);
-            };
-            const rim = new THREE.Mesh(new THREE.TorusGeometry(radius * scale * 0.97, Math.max(1.5, faceThickness) * scale, 16, 128), accentMaterial);
-            rim.position.z = -rimDepth * scale * 0.35;
-            hubcapGroup.add(rim);
-            const barrel = new THREE.Mesh(new THREE.CylinderGeometry(radius * scale, radius * scale * 0.97, rimDepth * scale, 96, 1, true), mat);
-            barrel.rotation.x = Math.PI / 2;
-            barrel.position.z = -rimDepth * scale * 0.5;
-            hubcapGroup.add(barrel);
-            const hubRadius = (g.center_type === 'cap' ? Math.max(bore, radius * 0.2) : bore) * scale * 0.58;
-            const hub = new THREE.Mesh(new THREE.CylinderGeometry(hubRadius, hubRadius * 1.05, Math.max(2, faceThickness * 1.6) * scale, 64), accentMaterial);
-            hub.rotation.x = Math.PI / 2;
-            hub.position.z = Math.max(depth, 3) * scale * 0.65;
-            hubcapGroup.add(hub);
-            const inner = Math.max(bore * 0.68, radius * 0.2);
-            const outer = radius * (family === 'mesh' ? 0.91 : 0.86);
-            const width = Math.max(4, radius * (family === 'mesh' ? 0.045 : 0.075));
-            const addSpoke = (angle, startRatio, endRatio, offset = 0) => {
-                const start = radial(radius * startRatio, angle + offset * 0.25, depth * 0.45);
-                const end = radial(radius * endRatio, angle + offset, depth * 0.45);
-                addBar(start, end, width, depth * 0.45);
-            };
-            // spoke_count is the number of visible outer ends, so this loop
-            // must create exactly one outer end per iteration for every family.
-            for (let i = 0; i < spokes; i++) {
-                const a = i * Math.PI * 2 / spokes;
-                let startRatio = inner / radius;
-                let offset = 0;
-                if (family === 'mesh') {
-                    startRatio = 0.24;
-                    offset = i % 2 ? -0.08 : 0.08;
-                } else if (family === 'split' || family === 'y_shaped') {
-                    startRatio = i % 2 ? 0.38 : 0.22;
-                    offset = i % 2 ? -0.13 : 0.13;
-                } else if (family === 'v_shaped') {
-                    offset = i % 2 ? 0.12 : -0.12;
-                }
-                addSpoke(a, startRatio, outer / radius, offset);
-            }
-            if (g.center_type === 'cap') {
-                const cap = new THREE.Mesh(new THREE.CylinderGeometry(hubRadius * 1.12, hubRadius * 1.12, Math.max(2, faceThickness) * scale, 64), mat);
-                cap.rotation.x = Math.PI / 2;
-                cap.position.z = depth * scale * 0.85;
-                hubcapGroup.add(cap);
-            }
-            hubcapGroup.rotation.x = -0.16;
-            hubcapGroup.position.z = 0.25;
-            scene.add(hubcapGroup);
-        }
-
-        // Detailed procedural wheel library: layered barrel, sculpted spokes and hardware.
         function buildWheelHubcap() {
             if (!scene) return;
-            clearHubcapModel(); hubcapGroup = new THREE.Group();
-            hubcapGroup.name = 'AutoKolpak_Hubcap_' + selectedDesign;
-            const g = scannedGeometry, radius = Number(g.outer_diameter_mm) / 2 || Number($('param-radius').value) * 12.7;
-            const q = g.geometry_ratios || geometryRatios || {}, bore = Number(g.center_hole_diameter_mm) || Number(q.center_hole_ratio) * radius * 2 || radius * .15;
-            const depth = Number(g.bulge_depth_mm) || Number(q.bulge_depth_ratio) * radius * 2 || Number($('param-depth').value);
-            const thick = Number(g.face_thickness_mm) || Number(q.face_thickness_ratio) * radius * 2 || 7;
-            const rimDepth = Number(g.rim_depth_mm) || Number(q.rim_depth_ratio) * radius * 2 || 120;
-            buildStockWheel(radius, bore, rimDepth);
-            const requestedCount = Math.max(5, Math.min(24, Number(g.spoke_count) || Number($('param-spokes').value)));
-            const pairedDesign = selectedDesign === 'split' || selectedDesign === 'twin';
-            const count = pairedDesign ? Math.max(3, Math.round(requestedCount / 2)) : requestedCount;
-            const clipCount = Math.max(4, Math.min(12, Number(g.clip_count) || Number($('param-clips').value)));
-            const fitDepth = Number(document.getElementById('fit-depth')?.value || 18);
-            const fitClearance = Number(document.getElementById('fit-clearance')?.value || 4);
-            const scale = .075, front = 3 + fitClearance * .08 + fitDepth * .03, mat = materials[currentMaterialType], accent = accentMaterial;
-            const vec = (r,a,z) => new THREE.Vector3(r*scale*Math.cos(a),r*scale*Math.sin(a),z*scale);
-            const mesh = (geo, material, z=0, name='') => { const o=new THREE.Mesh(geo,material); o.position.z=z*scale; o.name=name; hubcapGroup.add(o); return o; };
-            const ring = (r,w,z,material=accent) => mesh(new THREE.TorusGeometry(r*scale,w*scale,16,128),material,z,'Machined_Ring');
-            const disc = (r,h,z,material=mat,segments=96) => { const o=mesh(new THREE.CylinderGeometry(r*scale,r*.97*scale,h*scale,segments),material,z,'Layer'); o.rotation.x=Math.PI/2; return o; };
-            const bar = (a,b,w,h,material=mat) => { const mid=a.clone().add(b).multiplyScalar(.5), len=a.distanceTo(b), sh=new THREE.Shape(), half=Math.max(1.5,w)*scale/2;
-                sh.moveTo(-len/2,-half*.68); sh.lineTo(-len*.38,-half); sh.lineTo(len/2,-half*.58); sh.lineTo(len/2,half*.58); sh.lineTo(-len*.38,half); sh.closePath();
-                const geo=new THREE.ExtrudeGeometry(sh,{depth:Math.max(2,h)*scale,bevelEnabled:true,bevelSegments:3,bevelSize:.08,bevelThickness:.08}); const o=new THREE.Mesh(geo,material); o.position.copy(mid); o.rotation.z=Math.atan2(b.y-a.y,b.x-a.x); hubcapGroup.add(o); return o; };
-            const spoke = (a,from,to,skew=0,width=radius*.06,material=mat,z=front,height=thick*1.35) => bar(vec(radius*from,a+skew*.22,z),vec(radius*to,a+skew,z),width,height,material);
-            ring(radius * .965, Math.max(1.5, thick * .38), front, accent);
-            const hubRadius = Math.max(bore * .58, radius * .11);
-            const inner = Math.min(radius * .50, Math.max(hubRadius * 1.18, bore * .62));
-            const outer = radius * .87, w = Math.max(4.5, radius * .065), d = selectedDesign;
-            const spokeStart = inner / radius;
-            for(let i=0;i<count;i++){ const a=i*Math.PI*2/count;
-                if(d==='split'||d==='twin'){ const x=d==='twin'?.085:.14; spoke(a,spokeStart*.92,.94,-x,w*.62); spoke(a,spokeStart,.94,x,w*.62); spoke(a,spokeStart*.9,.50,0,w*.34,accent,front+thick*.15,thick*.45); }
-                else if(d==='y-spoke'||d==='petal'){ const x=d==='petal'?.24:.16; spoke(a,spokeStart,.57,0,w*.82); spoke(a-x,spokeStart*.98,.94,0,w*.68); spoke(a+x,spokeStart*.98,.94,0,w*.68); }
-                else if(d==='vortex'||d==='aero'){ spoke(a,spokeStart,.94,d==='aero'?.30:.20,w*.86); if(d==='aero') spoke(a+.14,spokeStart*.98,.90,.06,w*.32,accent,front+thick*.16,thick*.44); }
-                else if(d==='mesh'){ spoke(a,spokeStart,.94,i%2?-.11:.11,w*.58); spoke(a+Math.PI/count,spokeStart*.98,.94,i%2?.11:-.11,w*.42,accent,front+thick*.13,thick*.42); }
-                else if(d==='cross'){ spoke(a,spokeStart,.94,0,w*.58); spoke(a+Math.PI/count,spokeStart*.98,.94,0,w*.58); }
-                else if(d==='rally'){ spoke(a,spokeStart,.95,0,w*1.12); spoke(a+.035,Math.max(spokeStart,.46),.92,0,w*.28,accent,front+thick*.18,thick*.42); }
-                else spoke(a,spokeStart,.94,d==='classic'?0:.04,w);
-            }
-            if(d==='mesh'){ ring(radius*.56,w*.38,front+thick*.18); ring(radius*.72,w*.28,front+thick*.16); }
-            if(d==='rally') ring(radius*.68,w*.4,front+thick*.18);
-            disc(hubRadius,Math.max(1.5,thick*.5),front,mat,64);
-            const lugRadius = hubRadius * .76, hubFaceZ = front + Math.max(1.5,thick*.5) * .5;
-            for(let i=0;i<5;i++){ const a=i*Math.PI*2/5+Math.PI/10; const bolt=disc(3.1,Math.max(2.2,thick*.35),hubFaceZ+Math.max(2.2,thick*.35)*.5,accent,20); bolt.position.x=lugRadius*scale*Math.cos(a); bolt.position.y=lugRadius*scale*Math.sin(a); }
-            const clipRadius=radius*.94, clipThickness=Math.max(2,thick*.32), clipZ=front+Math.max(1.5,thick*.38)*.5;
-            for(let i=0;i<clipCount;i++){ const a=i*Math.PI*2/clipCount; const clip=disc(4.2,clipThickness,clipZ+clipThickness*.5,accent,20); clip.position.x=clipRadius*scale*Math.cos(a); clip.position.y=clipRadius*scale*Math.sin(a); }
-            // Rear retaining ring is intentionally omitted: the cap is a face overlay, not a second wheel barrel.
-            const applyMaterialMode = node => {
-                if (!node.material) return;
-                node.material = node.material.clone();
-                node.material.wireframe = currentViewMode === 'wireframe';
-                node.material.needsUpdate = true;
+            clearHubcapModel();
+            const g = scannedGeometry;
+            const profiles = Array.isArray(g.spoke_profiles) ? g.spoke_profiles : [];
+            if (!profiles.length) return;
+            hubcapGroup = new THREE.Group();
+            hubcapGroup.name = 'AutoKolpak_Photo_Reconstruction';
+            const radius = Number(g.outer_diameter_mm) / 2;
+            const bore = Number(g.center_hole_diameter_mm);
+            const depth = Number(g.bulge_depth_mm);
+            const thick = Number(g.face_thickness_mm);
+            const rimDepth = Number(g.rim_depth_mm);
+            if (![radius, bore, depth, thick, rimDepth].every(Number.isFinite)) return;
+            const scale = .075, mat = materials[currentMaterialType], accent = accentMaterial;
+            const vec = (r,a,z) => new THREE.Vector3(r*scale*Math.cos(a), r*scale*Math.sin(a), z*scale);
+            const bar = (a,b,width,height,material=mat) => {
+                const mid=a.clone().add(b).multiplyScalar(.5), len=a.distanceTo(b), sh=new THREE.Shape(), half=Math.max(1.5,width)*scale/2;
+                sh.moveTo(-len/2,-half); sh.lineTo(len/2,-half*.72); sh.lineTo(len/2,half*.72); sh.lineTo(-len/2,half); sh.closePath();
+                const geo=new THREE.ExtrudeGeometry(sh,{depth:Math.max(2,height)*scale,bevelEnabled:true,bevelSegments:2,bevelSize:.05,bevelThickness:.05});
+                const o=new THREE.Mesh(geo,material); o.position.copy(mid); o.rotation.z=Math.atan2(b.y-a.y,b.x-a.x); hubcapGroup.add(o);
             };
-            hubcapGroup.traverse(applyMaterialMode);
-            hubcapGroup.rotation.set(0, 0, 0);
-            hubcapGroup.renderOrder = 1;
-            scene.add(hubcapGroup);
+            hubcapGroup.add(new THREE.Mesh(new THREE.TorusGeometry(radius*scale*.97,Math.max(1.5,thick)*scale,16,128),accent));
+            const inner=Math.max(bore*.68,radius*.2), outer=radius*.86, baseWidth=Math.max(4,radius*.075);
+            profiles.forEach((profile,index) => {
+                const a=Number(profile.root_angle_deg)*Math.PI/180;
+                const mid=Number(profile.mid_offset_deg||0)*Math.PI/180;
+                const out=Number(profile.outer_offset_deg||0)*Math.PI/180;
+                const width=baseWidth*Number(profile.width_scale||1);
+                bar(vec(inner,a,depth*.45),vec(outer,a+out,depth*.45),width,thick, index%2===0 ? accent : mat);
+            });
+            if (g.center_type === 'cap') {
+                const cap=new THREE.Mesh(new THREE.CylinderGeometry(Math.max(bore*.5,radius*.12)*scale,Math.max(bore*.5,radius*.12)*scale,Math.max(2,thick)*scale,64),mat);
+                cap.rotation.x=Math.PI/2; cap.position.z=depth*scale*.85; hubcapGroup.add(cap);
+            }
+            hubcapGroup.rotation.x=-.16; hubcapGroup.position.z=.25; scene.add(hubcapGroup);
         }
 
         function setCameraPreset(preset) {
@@ -865,11 +760,8 @@
         function filterDesignCatalog(filter) { renderDesignCatalog(filter); }
         function setWheelDesign(design) {
             selectedDesign = DESIGN_NAMES[design] ? design : 'classic';
-            const el = $('param-design'); if (el) el.value = selectedDesign;
-            const label = $('val-design'); if (label) label.textContent = DESIGN_NAMES[selectedDesign];
-            scannedGeometry = { ...scannedGeometry, design: selectedDesign };
-            buildWheelHubcap();
-            renderDesignCatalog(document.getElementById('design-filter')?.value || 'all');
+            const label = $('val-design'); if (label) label.textContent = '?? ????';
+            renderDesignCatalog();
         }
         function setStockVisibility(visible) {
             if (stockWheelGroup) stockWheelGroup.visible = Boolean(visible);
@@ -1048,9 +940,6 @@
 
         function applyScanToModel(p) {
             scannedGeometry = { ...scannedGeometry, ...p };
-            const apiDesign = { classic: 'classic', v_shaped: 'vortex', split: 'split', y_shaped: 'y-spoke', mesh: 'mesh' };
-            if (p.family && apiDesign[p.family]) setWheelDesign(apiDesign[p.family]);
-
             geometryRatios = p.geometry_ratios || geometryRatios;
             applyingScan = true;
             const set = (id, value) => {

@@ -310,8 +310,7 @@ class AIService:
                 continue
             spoke_profiles.append({"root_angle_deg": angle % 360.0, "mid_offset_deg": max(-30.0, min(30.0, mid_offset)), "outer_offset_deg": max(-30.0, min(30.0, outer_offset)), "width_scale": max(0.55, min(1.65, width))})
         if not spoke_profiles:
-            spoke_profiles = [{"root_angle_deg": i * 360.0 / int(spokes), "mid_offset_deg": shape["spoke_sweep_deg"] * 0.45, "outer_offset_deg": shape["spoke_sweep_deg"], "width_scale": shape["spoke_width_scale"]} for i in range(int(spokes))]
-
+            raise ValueError("AI не извлёк индивидуальные профили спиц по фотографии; готовая шаблонная модель не используется")
 
 
         hidden = "Диаметр центрального отверстия скрыт декоративной крышкой и не выдаётся. " if center == "cap" else ""
