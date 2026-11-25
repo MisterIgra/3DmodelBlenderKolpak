@@ -1110,12 +1110,29 @@
             const previewBox = document.getElementById('scanner-preview-box');
             const loading = document.getElementById('scanner-loading');
             const log = document.getElementById('scanner-log');
-            const diamRaw = document.getElementById('ref-diam').value.trim();
-            const diam = diamRaw === '' ? null : Number(diamRaw);
-            if (diam !== null && !(diam >= 330 && diam <= 460)) {
+            const dimensionFields = [
+                ['ref-diam', 'наружный диаметр'],
+                ['scan-face-thickness', 'толщина'],
+                ['scan-bulge-depth', 'выпуклость'],
+                ['scan-rim-depth', 'глубина обода'],
+                ['scan-center-hole', 'центральное отверстие'],
+                ['scan-bolt-count', 'количество креплений'],
+            ];
+            const missing = dimensionFields.filter(([id]) => document.getElementById(id).value.trim() === '').map(([, label]) => label);
+            const diam = Number(document.getElementById('ref-diam').value);
+            const ranges = [
+                ['ref-diam', 330, 460, 'Наружный диаметр'],
+                ['scan-face-thickness', 5, 11, 'Толщина'],
+                ['scan-bulge-depth', 8, 50, 'Выпуклость'],
+                ['scan-rim-depth', 90, 170, 'Глубина обода'],
+                ['scan-center-hole', 50, 74, 'Центральное отверстие'],
+                ['scan-bolt-count', 3, 8, 'Количество креплений'],
+            ];
+            const invalid = ranges.find(([id, min, max]) => { const value = Number(document.getElementById(id).value); return !Number.isFinite(value) || value < min || value > max; });
+            if (missing.length || invalid) {
                 log.innerText = '';
                 previewBox.classList.remove('hidden');
-                alert('Наружный диаметр должен быть от 330 до 460 мм (или оставьте поле пустым).');
+                alert(missing.length ? `Заполните размеры: ${missing.join(', ')}.` : `${invalid[3]} должно быть в диапазоне ${invalid[1]}–${invalid[2]}.`);
                 return;
             }
             previewBox.classList.add('hidden');
