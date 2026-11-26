@@ -223,6 +223,20 @@ def make_metiz(part_type, p, material_name):
     return shaft
 
 
+def join_mesh_objects(name="Generated_Model"):
+    """Export one connected assembly instead of a pile of visible loose parts."""
+    meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+    if not meshes:
+        return
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in meshes:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = meshes[0]
+    bpy.ops.object.join()
+    joined = bpy.context.object
+    joined.name = name
+
+
 def export(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", export_materials="EXPORT")
@@ -230,7 +244,9 @@ def export(path):
 
 def main():
     args = args_parse()
-    request = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    # PowerShell and some Windows editors may write UTF-8 JSON with a BOM.
+    # Accept both BOM and plain UTF-8 request files.
+    request = json.loads(Path(args.input).read_text(encoding="utf-8-sig"))
     clear_scene()
     if request.get("category") == "hubcap":
         p = dict(request.get("params") or {})
@@ -270,6 +286,7 @@ def main():
         make_hubcap(p, __import__("random").Random(int(p.get("seed", 42))))
     else:
         make_metiz(request["part_type"], request.get("params") or {}, request.get("material", "steel"))
+    join_mesh_objects("Generated_Model")
     export(Path(args.output))
 
 
