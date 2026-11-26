@@ -163,7 +163,7 @@ def _add_spokes(p, rng, radius, bore_r, face_mat, accent_mat):
     sweep = math.radians(float(p.get("spoke_sweep_deg", 0.0)))
     mid_ratio = float(p.get("spoke_mid_radius_ratio", 0.53))
     outer_ratio = float(p.get("spoke_outer_radius_ratio", 0.82))
-    root_r = max(bore_r * 1.55, radius * 0.19)
+    root_r = max(bore_r * 1.35, radius * 0.16)
     # Extend the spoke tips into the inner barrel wall so the decorative face
     # is mechanically supported by the rim rather than ending in mid-air.
     outer_r = radius * max(0.89, min(0.955, outer_ratio + 0.065))
@@ -175,7 +175,10 @@ def _add_spokes(p, rng, radius, bore_r, face_mat, accent_mat):
     z_root = radius * 0.11 + bulge
     z_mid = radius * 0.095 + bulge * 0.70
     z_tip = radius * 0.075 + bulge * 0.30
-    base_widths = [radius * 0.032 * width_scale, radius * 0.042 * width_scale, radius * 0.029 * width_scale]
+    # The root is deliberately wider than the visible arm. It sinks into the
+    # structural web and the hub flange, so a spoke is supported by material
+    # instead of merely touching it at one edge.
+    base_widths = [radius * 0.052 * width_scale, radius * 0.042 * width_scale, radius * 0.029 * width_scale]
     profiles = p.get("spoke_profiles") if isinstance(p.get("spoke_profiles"), list) else []
 
     for i in range(root_count):
@@ -235,21 +238,28 @@ def make_hubcap(p, rng):
            radius*0.021, accent, major_segments=128, minor_segments=16)
     _torus("Inner_Bead_Ring", radius*0.755, radius*0.010*lip_scale,
            radius*0.020, accent, major_segments=112, minor_segments=12)
+    # Continuous structural face behind the decorative spokes. It is a real
+    # load-bearing web, with a solid overlap into both the hub and the rim.
+    # The previous placement left the arms almost coplanar with the web, which
+    # made them look detached in the GLB viewer.
+    face_front = radius * 0.105 + bulge + face_thickness * 0.38
+    face_back = face_front - max(face_thickness * 1.55, radius * 0.045)
+    _annulus("Continuous_Face_Backplate", radius * 0.955, bore_r * 0.94,
+             face_back, face_front, base, segments=128)
 
-    # Continuous structural face behind the decorative spokes. Without this
-    # bridge, the photo-shaped spokes are separate floating solids between the
-    # hub and the barrel. It overlaps both neighbouring rings on purpose.
-    # Put the plate behind the lowest part of the spokes so the solids overlap
-    # through their thickness instead of merely touching at a single edge.
-    face_base = radius * 0.11 + bulge - face_thickness * 0.45
-    face_back = face_base - face_thickness
-    _annulus("Continuous_Face_Backplate", radius * 0.94, bore_r,
-             face_back, face_base, barrel_mat, segments=128)
-
+    # A shallow outer web closes the transition into the barrel wall. The
+    # decorative arms enter this web by several millimetres, so their tips
+    # cannot appear to float above the rim.
+    web_outer = radius * 0.955
+    web_inner = radius * 0.70
+    web_front = face_front - face_thickness * 0.12
+    web_back = face_back + face_thickness * 0.18
+    _annulus("Outer_Face_Web", web_outer, web_inner,
+             web_back, web_front, base, segments=128)
     # Raised hub flange with an actual centre bore (or a separate centre cap).
     hub_outer = radius*0.305
-    hub_front = radius*0.14 + bulge
-    hub_back = hub_front - face_thickness*0.9
+    hub_front = face_front + face_thickness * 0.42
+    hub_back = face_back - face_thickness * 0.10
     hub_outer = max(hub_outer, bore_r*1.55)
     if hub_outer > bore_r * 1.12:
         _annulus("Hub_Flange", hub_outer, bore_r, hub_back, hub_front,

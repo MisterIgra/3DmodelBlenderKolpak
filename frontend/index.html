@@ -113,101 +113,52 @@
         #metiz-viewer canvas:active { cursor:grabbing; }
         @media(max-width:900px) { .metiz-layout { grid-template-columns:1fr; } .metiz-preview { position:relative; } #metiz-viewer { height:360px; } }
 
+        /* AutoKolpak workspace refresh */
+        :root { --ak-bg:#070b12; --ak-panel:#0d131d; --ak-panel-2:#111a26; --ak-line:rgba(148,163,184,.14); --ak-muted:#8190a5; --ak-text:#edf4ff; --ak-accent:#5b8cff; --ak-mint:#49d7b0; }
+        * { box-sizing:border-box; }
+        body.ak-app { background:var(--ak-bg); color:var(--ak-text); font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; letter-spacing:-.01em; }
+        .welcome-screen { background:#070b12; color:var(--ak-text); isolation:isolate; }
+        .welcome-grid { position:absolute; inset:0; opacity:.38; background-image:linear-gradient(rgba(91,140,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(91,140,255,.08) 1px,transparent 1px); background-size:56px 56px; mask-image:linear-gradient(to bottom,black,transparent 82%); }
+        .welcome-glow { position:absolute; border-radius:999px; filter:blur(100px); opacity:.32; pointer-events:none; }
+        .glow-one { width:520px; height:520px; background:#214da4; left:-180px; top:-180px; }.glow-two { width:420px; height:420px; background:#087e70; right:-130px; bottom:-160px; }
+        .welcome-inner { position:relative; min-height:calc(100% - 42px); max-width:1180px; padding:64px 36px; margin:auto; display:grid; grid-template-columns:1.1fr .9fr; gap:90px; align-items:center; }
+        .welcome-copy { max-width:580px; }.eyebrow,.card-kicker { color:#79a4ff; font:600 10px/1.2 ui-monospace,SFMono-Regular,monospace; letter-spacing:.18em; }.welcome-mark { width:76px; height:76px; margin:28px 0 22px; position:relative; display:grid; place-items:center; border:1px solid rgba(91,140,255,.5); border-radius:24px; color:#fff; font-size:30px; background:linear-gradient(145deg,rgba(91,140,255,.35),rgba(73,215,176,.16)); box-shadow:0 18px 50px rgba(40,100,255,.2); }.welcome-mark span { position:absolute; inset:8px; border:1px dashed rgba(73,215,176,.7); border-radius:18px; animation:spin 16s linear infinite; }.welcome-copy h1 { margin:0; font-size:clamp(50px,7vw,92px); line-height:.92; letter-spacing:-.08em; font-weight:800; }.welcome-copy h1 span { color:#65d9bc; }.welcome-copy>p { max-width:500px; margin:26px 0 0; color:#95a5bb; font-size:17px; line-height:1.65; }.welcome-points { display:flex; flex-wrap:wrap; gap:10px; margin-top:30px; color:#bdc9d9; font-size:12px; }.welcome-points span { padding:10px 13px; border:1px solid var(--ak-line); border-radius:10px; background:rgba(13,19,29,.68); }.welcome-points i { color:var(--ak-mint); margin-right:7px; }
+        .welcome-card { max-width:410px; width:100%; padding:30px; border:1px solid rgba(148,163,184,.17); border-radius:22px; background:rgba(13,19,29,.84); box-shadow:0 28px 90px rgba(0,0,0,.28); backdrop-filter:blur(22px); }.welcome-card h2 { margin:13px 0 8px; font-size:25px; letter-spacing:-.04em; }.welcome-card p { color:var(--ak-muted); font-size:13px; line-height:1.55; margin:0 0 22px; }.welcome-card form { display:grid; gap:13px; }.welcome-card label { color:#9aa9be; font-size:11px; }.welcome-card .inp { margin-top:6px; }.welcome-primary { width:100%; padding:13px 16px; margin-top:8px; border:0; border-radius:11px; color:#07111b; background:linear-gradient(100deg,#78a2ff,#55dfbb); font-weight:750; font-size:13px; cursor:pointer; transition:transform .18s,filter .18s; }.welcome-primary:hover { transform:translateY(-2px); filter:brightness(1.08); }.welcome-primary i { float:right; padding-top:2px; }.welcome-actions { display:flex; gap:8px; margin-top:10px; }.welcome-actions button,.guest-link { flex:1; color:#8190a5; background:none; border:0; padding:8px 0; font-size:11px; cursor:pointer; }.welcome-actions button:hover,.guest-link:hover { color:#fff; }.welcome-avatar { width:48px; height:48px; display:grid; place-items:center; color:#07111b; background:linear-gradient(135deg,#78a2ff,#55dfbb); border-radius:15px; font-size:19px; }.form-error { min-height:16px!important; color:#fb7185!important; margin:0!important; font-size:11px!important; }.theme-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin:18px 0; }.theme-card { min-height:72px; border:1px solid var(--ak-line)!important; border-radius:12px!important; padding:12px!important; background:#111a26!important; }.loading-step { text-align:center; padding:28px 0 12px; }.loader-ring { width:54px; height:54px; margin:0 auto 22px; border:2px solid rgba(91,140,255,.22); border-top-color:#65d9bc; border-right-color:#79a4ff; border-radius:50%; animation:spin 1s linear infinite; }.loading-line { height:4px; overflow:hidden; border-radius:10px; background:#1b2636; }.loading-line span { display:block; width:55%; height:100%; background:linear-gradient(90deg,#79a4ff,#55dfbb); animation:bar 1.8s ease-in-out infinite alternate; }.welcome-footer { position:relative; padding:12px 20px 18px; text-align:center; color:#526176; font:10px ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; }
+        .app-shell-header { min-height:70px; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; gap:20px; background:rgba(9,14,22,.92); border-bottom:1px solid var(--ak-line); z-index:20; box-shadow:0 10px 30px rgba(0,0,0,.14); }.app-shell-header>div:first-child { display:flex; align-items:center; gap:12px; }.brand-symbol { width:37px; height:37px; display:grid; place-items:center; border:1px solid rgba(91,140,255,.5); border-radius:11px; color:#75e2c2; background:linear-gradient(145deg,#1e3e80,#123e38); }.app-shell-header h1 { margin:0; font-size:14px; font-weight:750; }.app-shell-header p { margin:3px 0 0; color:#607087; font:9px ui-monospace,monospace; letter-spacing:.12em; }.workspace-nav { border:1px solid var(--ak-line); background:#0c131d; border-radius:10px; }.workspace-nav button { padding:9px 13px; color:#8392a8; }.workspace-nav button.active { color:#fff; background:#274d9c; box-shadow:0 4px 14px rgba(39,77,156,.35); }.hubcap-tabs { display:flex; gap:3px; padding:3px; border:1px solid var(--ak-line); border-radius:10px; background:#0a1018; }.hubcap-tabs button { padding:8px 12px; border-radius:7px; color:#78889e; font-size:11px; }.hubcap-tabs button:hover { color:#fff; }.hubcap-tabs button.bg-blue-600 { background:#244a99; color:#fff; }.app-header-actions { display:flex; align-items:center; gap:9px; }.app-header-actions>span:last-of-type { border:1px solid var(--ak-line); border-radius:9px; padding:5px 10px 5px 5px; }.app-version { color:#718197; font:9px ui-monospace,monospace; letter-spacing:.08em; }.app-version i { margin-right:5px; }.app-header-actions button { border-color:var(--ak-line); background:#101a28; }.app-main { min-height:0; }.control-rail { background:#0b111a; border-right:1px solid var(--ak-line); }.control-panel { border-bottom:1px solid var(--ak-line); }.panel-heading { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; }.panel-heading>div { display:flex; align-items:flex-start; gap:10px; }.panel-heading h2 { margin:0; font-size:14px; font-weight:700; }.panel-heading i { color:#65d9bc; }.section-number { color:#638fff; font:10px ui-monospace,monospace; padding-top:3px; }.dropzone { border:1px dashed rgba(120,145,180,.35); border-radius:16px; padding:28px 18px; text-align:center; background:linear-gradient(145deg,rgba(17,26,38,.7),rgba(7,11,18,.5)); }.dropzone:hover { border-color:#638fff; background:#101b2b; }.dropzone .w-12 { background:rgba(91,140,255,.16); }.control-rail .inp,.control-rail select,.control-rail input[type=number] { background:#080e16; border-color:var(--ak-line); border-radius:9px; }.control-rail label { color:#8291a5; }.control-rail hr { border-color:var(--ak-line); }.control-rail h3 { color:#c1ccdc; }.ak-design-card { background:#101a27!important; border-color:var(--ak-line)!important; border-radius:10px!important; }.ak-design-card.active { background:rgba(91,140,255,.16)!important; border-color:#638fff!important; }.ak-design-preview { background:radial-gradient(circle,#243657,#080d15 72%)!important; }.control-rail input[type=range] { accent-color:#638fff; }
+        .app-main>section { background:radial-gradient(circle at 50% 40%,#182438 0,#0a1019 47%,#070b12 100%); }.app-main>section:before { content:'3D PREVIEW / LIVE'; position:absolute; top:21px; left:24px; z-index:4; color:#687991; font:9px ui-monospace,monospace; letter-spacing:.16em; pointer-events:none; }.app-main>section #canvas-container { min-height:300px; }.app-main>section .absolute.top-4 { top:15px; left:auto; }.app-main>section .absolute.top-4>div { border-color:var(--ak-line); background:rgba(9,14,22,.85); }.ak-swatch { width:20px; height:20px; }.app-main>section>div:last-child { border-color:var(--ak-line); background:rgba(9,14,22,.94); }.app-main>section>div:last-child select { background:#101a27; border-color:var(--ak-line); }.app-main>section>div:last-child button { border-radius:9px; }.metiz-preview #metiz-viewer { border-color:var(--ak-line); background:#080e16!important; }.metiz-layout,.metiz-preview { background:transparent; }.metiz-layout>div>div,.metiz-preview { border-color:var(--ak-line)!important; }.metiz-layout input,.metiz-layout select { background:#080e16; border-color:var(--ak-line); }.metiz-layout button { border-radius:9px; }
+        @media(max-width:1050px) { .welcome-inner { gap:35px; }.app-version { display:none; } }
+        @media(max-width:760px) { .welcome-inner { grid-template-columns:1fr; padding:40px 20px; gap:30px; }.welcome-copy { text-align:center; margin:auto; }.welcome-mark { margin:20px auto; }.welcome-copy>p { font-size:14px; }.welcome-points { justify-content:center; }.welcome-card { margin:auto; }.app-shell-header { flex-wrap:wrap; padding:10px 13px; gap:9px; }.app-shell-header .workspace-nav { order:3; width:100%; }.app-shell-header .workspace-nav button { flex:1; justify-content:center; }.hubcap-tabs { order:4; width:100%; }.hubcap-tabs button { flex:1; }.app-header-actions { margin-left:auto; }.app-main { overflow:auto; }.control-rail { max-height:none; overflow:visible; border-right:0; }.app-main>section { min-height:680px; }.app-main>section>div:last-child { position:relative; }.metiz-layout { grid-template-columns:1fr; } }
+
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden select-none">
+<body class="ak-app bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden select-none">
 
-    <!-- Start screen -->
-    <div id="welcome" class="fixed inset-0 z-[100] overflow-y-auto bg-slate-950">
-        <div class="orb bg-blue-600 w-96 h-96 -top-24 -left-24"></div>
-        <div class="orb bg-emerald-500 w-80 h-80 bottom-0 right-0" style="animation-delay:-5s"></div>
-        <div class="orb bg-indigo-500 w-72 h-72 top-1/3 left-1/2" style="animation-delay:-9s"></div>
-        <div class="grid-bg"></div>
-        <!-- Копирайтинг / Авторы внизу стартового экрана -->
-        <div class="relative text-center pb-6 text-xs text-slate-500">
-            Школа 2098, Сидоров, Соменко, Степанян
-        </div>
-        <div class="relative min-h-full max-w-6xl mx-auto px-6 py-10 grid lg:grid-cols-2 gap-10 items-center">
-            <div class="text-center lg:text-left">
-                <svg viewBox="-100 -100 200 200" class="hero w-52 h-52 sm:w-64 sm:h-64 mx-auto lg:mx-0" style="filter:drop-shadow(0 0 30px rgb(var(--a-500)/.5))">
-                    <g class="spin-s" style="animation-duration:24s"><circle r="94" style="fill:none;stroke:rgb(var(--a-500));stroke-width:1.5;stroke-dasharray:3 9"/></g>
-                    <g class="spin-s" style="animation-duration:14s;animation-direction:reverse"><circle r="82" style="fill:none;stroke:rgb(var(--e-400));stroke-width:2;stroke-dasharray:40 20 6 20"/></g>
-                    <g id="hero-spokes" class="spin-s" style="animation-duration:30s"></g>
-                    <circle r="24" style="fill:rgb(var(--s-900));stroke:rgb(var(--a-400));stroke-width:3"/>
-                    <circle r="8" style="fill:rgb(var(--e-400))"/>
-                </svg>
-                <h1 class="up mt-6 text-5xl sm:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-slate-100 via-blue-400 to-emerald-400 bg-clip-text text-transparent" style="animation-delay:.1s">АвтоКолпак</h1>
-                <p class="up mt-3 text-slate-400 max-w-md mx-auto lg:mx-0" style="animation-delay:.25s">Параметрический САПР и слайсер колпаков с ИИ-сканером по фото. Инженеры будущего 2098.</p>
-                <div class="up mt-5 flex flex-wrap gap-2 justify-center lg:justify-start text-[11px] text-slate-300" style="animation-delay:.4s">
-                    <span class="px-3 py-1 rounded-full border border-slate-800 bg-slate-900/60"><i class="fa-solid fa-cube text-blue-400 mr-1"></i>3D-редактор</span>
-                    <span class="px-3 py-1 rounded-full border border-slate-800 bg-slate-900/60"><i class="fa-solid fa-wand-magic-sparkles text-emerald-400 mr-1"></i>AI-скан по фото</span>
-                    <span class="px-3 py-1 rounded-full border border-slate-800 bg-slate-900/60"><i class="fa-solid fa-download text-blue-400 mr-1"></i>Экспорт STL</span>
-                </div>
-            </div>
-
-            <div class="up relative w-full max-w-md mx-auto rounded-3xl border border-slate-800 bg-slate-900/70 backdrop-blur-xl p-7 shadow-2xl" style="animation-delay:.2s">
-                <div id="ws-0" class="wstep hidden text-center">
-                    <div class="relative w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-400 flex items-center justify-center text-2xl text-white">
-                        <span class="absolute inset-0 rounded-full bg-blue-500/40" style="animation:ring 2s ease-out infinite"></span><i class="fa-solid fa-user relative"></i>
-                    </div>
-                    <h2 class="text-xl font-bold text-slate-100">С возвращением, <span id="wb-name"></span>!</h2>
-                    <p class="text-xs text-slate-400 mt-1 mb-5">Демо-профиль найден в этом браузере</p>
-                    <button onclick="continueSaved()" class="btn-main">Продолжить</button>
-                    <div class="flex gap-2 mt-2">
-                        <button onclick="draft=getP();goStep(2)" class="btn-sec">Сменить тему</button>
-                        <button onclick="setP(null);goStep(1)" class="btn-sec">Другой аккаунт</button>
-                    </div>
-                </div>
-
-                <div id="ws-1" class="wstep">
-                    <div class="flex items-center justify-between mb-1">
-                        <h2 class="text-xl font-bold text-slate-100">Регистрация</h2>
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">ДЕМО</span>
-                    </div>
-                    <p class="text-xs text-slate-400 mb-5">Создайте демо-аккаунт, чтобы начать работу</p>
-                    <form onsubmit="event.preventDefault();doRegister()" class="space-y-3" autocomplete="off">
-                        <input id="reg-name" class="inp" placeholder="Имя" maxlength="30">
-                        <input id="reg-mail" type="email" class="inp" placeholder="Email">
-                        <input id="reg-pass" type="password" class="inp" placeholder="Пароль (мин. 6 символов)">
-                        <p id="reg-err" class="text-xs text-red-400 min-h-[1rem]"></p>
-                        <button class="btn-main">Создать аккаунт →</button>
-                    </form>
-                    <button onclick="draft={name:'Гость',email:''};goStep(2)" class="w-full mt-3 text-xs text-slate-400 hover:text-slate-100 transition-all">Продолжить как гость</button>
-                    <p class="text-[10px] text-slate-500 mt-4 leading-relaxed">Демо-режим: имя и email хранятся только в вашем браузере. Пароль нигде не сохраняется и никуда не отправляется.</p>
-                </div>
-
-                <div id="ws-2" class="wstep hidden">
-                    <h2 class="text-xl font-bold text-slate-100">Выберите тему</h2>
-                    <p class="text-xs text-slate-400 mb-4">Применяется сразу, сменить можно в любой момент</p>
-                    <div id="theme-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5"></div>
-                    <button onclick="finishTheme()" class="btn-main">Запустить САПР</button>
-                </div>
-
-                <div id="ws-3" class="wstep hidden text-center py-6">
-                    <div class="w-14 h-14 mx-auto mb-4 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p id="launch-msg" class="text-sm text-slate-200 mb-4">Загрузка 3D-движка…</p>
-                    <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style="animation:bar 1.9s ease-in-out both"></div></div>
-                </div>
+    <div id="welcome" class="welcome-screen fixed inset-0 z-[100] overflow-y-auto">
+        <div class="welcome-glow glow-one"></div><div class="welcome-glow glow-two"></div>
+        <div class="welcome-grid"></div>
+        <div class="welcome-inner">
+            <svg id="hero-spokes" hidden aria-hidden="true"></svg>
+            <div class="welcome-copy"><div class="eyebrow"><i class="fa-solid fa-cube"></i> PARAMETRIC WORKSPACE / 01</div><div class="welcome-mark"><span></span><i class="fa-solid fa-dharmachakra"></i></div><h1>Авто<span>Колпак</span></h1><p>Инженерная среда для реконструкции автомобильных колпаков по фото и подготовки моделей к производству.</p><div class="welcome-points"><span><i class="fa-solid fa-wand-magic-sparkles"></i> AI-анализ формы</span><span><i class="fa-solid fa-cube"></i> Blender 3D</span><span><i class="fa-solid fa-file-export"></i> STL / GLB</span></div></div>
+            <div class="welcome-card">
+                <div id="ws-0" class="wstep hidden"><div class="welcome-avatar"><i class="fa-solid fa-user"></i></div><h2>С возвращением, <span id="wb-name"></span></h2><p>Ваш локальный профиль готов к работе.</p><button onclick="continueSaved()" class="welcome-primary">Продолжить <i class="fa-solid fa-arrow-right"></i></button><div class="welcome-actions"><button onclick="draft=getP();goStep(2)">Сменить тему</button><button onclick="setP(null);goStep(1)">Другой профиль</button></div></div>
+                <div id="ws-1" class="wstep"><div class="card-kicker">ЛОКАЛЬНЫЙ ДЕМО-ПРОФИЛЬ</div><h2>Начнём проект</h2><p>Имя нужно только для персонализации интерфейса. Данные остаются в браузере.</p><form onsubmit="event.preventDefault();doRegister()" autocomplete="off"><label>Имя<input id="reg-name" class="inp" placeholder="Например, Роман" maxlength="30"></label><label>Email<input id="reg-mail" type="email" class="inp" placeholder="you@example.com"></label><label>Пароль<input id="reg-pass" type="password" class="inp" placeholder="Минимум 6 символов"></label><p id="reg-err" class="form-error"></p><button class="welcome-primary">Открыть рабочее место <i class="fa-solid fa-arrow-right"></i></button></form><button onclick="draft={name:'Гость',email:''};goStep(2)" class="guest-link">Продолжить как гость</button></div>
+                <div id="ws-2" class="wstep hidden"><div class="card-kicker">НАСТРОЙКА СРЕДЫ</div><h2>Выберите акцент</h2><p>Тему можно изменить позже из верхней панели.</p><div id="theme-grid" class="theme-grid"></div><button onclick="finishTheme()" class="welcome-primary">Запустить конструктор <i class="fa-solid fa-arrow-right"></i></button></div>
+                <div id="ws-3" class="wstep hidden loading-step"><div class="loader-ring"></div><h2 id="launch-msg">Запускаем рабочее место</h2><p>Подготавливаем 3D-сцену…</p><div class="loading-line"><span></span></div></div>
             </div>
         </div>
+        <div class="welcome-footer">AutoKolpak AI / локальная инженерная среда</div>
     </div>
 
-    <header class="app-header bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between gap-4 z-20 shrink-0 shadow-md">
+    <header class="app-header app-shell-header">
         <div class="flex items-center space-x-3 shrink-0">
-            <div class="bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-400 p-2 rounded-lg shadow-lg shadow-blue-500/20">
-                <i class="fa-solid fa-dharmachakra text-white text-lg animate-spin-slow"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-base tracking-tight text-slate-100">АвтоКолпак</h1>
-                <p class="header-brand-caption text-[10px] text-slate-500">3D-конструктор деталей по фото</p>
-            </div>
+            <div class="brand-symbol"><i class="fa-solid fa-dharmachakra"></i></div><div><h1>АвтоКолпак</h1><p>PARAMETRIC DESIGN SYSTEM</p></div>
         </div>
 
         <nav class="workspace-nav" aria-label="Разделы конструктора">
             <button onclick="switchWorkspace('hubcaps')" id="workspace-btn-hubcaps" class="active" aria-current="page"><i class="fa-solid fa-circle-notch"></i>Колпаки</button>
             <button onclick="switchWorkspace('fasteners')" id="workspace-btn-fasteners"><i class="fa-solid fa-screwdriver-wrench"></i>Другие изделия</button>
         </nav>
-        <div id="hubcap-tabs" class="hubcap-tabs flex bg-slate-950 p-1 rounded-lg border border-slate-800">
+        <div id="hubcap-tabs" class="hubcap-tabs">
             <button onclick="switchTab(1)" id="tab-btn-1" class="px-3 py-1.5 rounded-md text-xs font-medium transition-all bg-blue-600 text-white shadow">
                 <i class="fa-solid fa-cube mr-1.5"></i><span class="hubcap-tabs-label">Модель 3D</span><span class="hubcap-tabs-label"> · </span>STL/OBJ
             </button>
@@ -216,8 +167,8 @@
             </button>
         </div>
 
-        <div class="app-header-actions flex items-center space-x-3 shrink-0">
-            <span class="app-version text-xs font-mono text-slate-400 bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/80 flex items-center"><i class="fa-solid fa-cube text-emerald-400 mr-2"></i>3D CAD v3.9</span>
+        <div class="app-header-actions">
+            <span class="app-version"><i class="fa-solid fa-circle text-emerald-400"></i> ENGINE READY</span>
             <button onclick="cycleTheme()" title="Сменить тему" aria-label="Сменить тему" class="w-8 h-8 rounded-lg bg-slate-800/80 border border-slate-700/80 text-slate-300 hover:text-slate-100 transition-all"><i class="fa-solid fa-palette"></i></button>
             <span class="text-xs text-slate-200 bg-slate-800/80 pl-1.5 pr-3 py-1 rounded-lg border border-slate-700/80 flex items-center">
                 <span id="user-ava" class="w-6 h-6 mr-2 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-400 text-white font-bold flex items-center justify-center">?</span><span id="user-name">—</span>
@@ -226,32 +177,31 @@
         </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+    <main class="app-main flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         
         <!-- LEFT SIDEBAR: Controls & Presets -->
-        <aside class="lg:col-span-4 bg-slate-900/90 backdrop-blur border-r border-slate-800 flex flex-col h-full overflow-y-auto z-10">
+        <aside class="control-rail lg:col-span-4 flex flex-col h-full overflow-y-auto z-10">
             
             <!-- TAB 2: UPLOAD STL/OBJ -->
-            <div id="tab-content-1" class="p-5 space-y-4">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Импорт 3D моделей</h2>
-                <div class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-2xl p-6 text-center bg-slate-950/40 transition-all cursor-pointer">
-                    <input type="file" id="file-input" accept=".stl" class="hidden" onchange="handleFileUpload(event)">
+            <div id="tab-content-1" class="control-panel p-5 space-y-4">
+                <div class="panel-heading"><div><span class="section-number">01</span><h2>Импорт модели</h2></div><i class="fa-solid fa-file-import"></i></div>
+                <div class="dropzone">
+                    <input type="file" id="file-input" accept=".stl,.obj,.glb,.gltf,model/gltf-binary,model/gltf+json" class="hidden" onchange="handleFileUpload(event)">
                     <div class="w-12 h-12 bg-blue-600/10 text-blue-400 rounded-xl mx-auto flex items-center justify-center mb-3">
                         <i class="fa-solid fa-file-arrow-up text-xl"></i>
                     </div>
-                    <p class="text-xs font-medium text-slate-200 mb-1">Перетащите STL файл сюда</p>
-                    <p class="text-[10px] text-slate-400 mb-3">или нажмите кнопкой ниже</p>
+                    <p class="text-xs font-medium text-slate-200 mb-1">Перетащите 3D-файл сюда</p>
+                    <p class="text-[10px] text-slate-400 mb-3">STL, OBJ, GLB или GLTF</p>
                     <button onclick="document.getElementById('file-input').click()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-all">
-                        Выбрать STL файл
+                        Выбрать файл
                     </button>
                 </div>
                 <div id="upload-status" class="text-xs text-slate-400 hidden p-3 bg-slate-950 rounded-xl border border-slate-800"></div>
             </div>
 
             <!-- TAB 3: AI SCANNER -->
-            <div id="tab-content-2" class="p-5 space-y-4 hidden">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">AI-сканер геометрии</h2>
+            <div id="tab-content-2" class="control-panel p-5 space-y-4 hidden">
+                <div class="panel-heading"><div><span class="section-number">01</span><h2>AI-сканер</h2></div><i class="fa-solid fa-wand-magic-sparkles"></i></div>
                 <p id="ai-status" class="text-[11px] text-slate-400">Проверка состояния модели…</p>
                 <div class="space-y-1">
                     <p class="text-[11px] text-amber-300">AI определяет только форму по фотографии. Все размеры для 3D-модели вводятся пользователем.</p>
@@ -288,10 +238,7 @@
 
             <!-- PARAMETRIC EDITOR SLIDERS -->
             <div class="p-5 space-y-4 flex-1">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Конфигуратор колпака</span>
-                    <i class="fa-solid fa-sliders text-blue-500"></i>
-                </h2>
+                <div class="panel-heading"><div><span class="section-number">02</span><h2>Параметры конструкции</h2></div><i class="fa-solid fa-sliders"></i></div>
                 
                 <!-- Wheel Design -->
                 <div class="space-y-1.5">
@@ -700,7 +647,11 @@
         }
 
         function loadGeneratedHubcap(url) {
-            if (!scene || !THREE.GLTFLoader || !url) return;
+            if (!scene || !THREE.GLTFLoader || !url) {
+                const status = document.getElementById('scanner-log') || document.getElementById('upload-status');
+                if (status) status.innerText = 'GLB не загружен: 3D-сцена ещё не готова.';
+                return;
+            }
             const requestUrl = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
             clearHubcapModel();
             const loader = new THREE.GLTFLoader();
@@ -709,11 +660,16 @@
                 const box = new THREE.Box3().setFromObject(model);
                 const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());
+                if (!size.x || !size.y || !size.z) {
+                    document.getElementById('scanner-log').innerText = '[Blender] GLB не содержит видимой геометрии.';
+                    buildWheelHubcap();
+                    return;
+                }
                 const diameter = Number(scannedGeometry.outer_diameter_mm) || 380;
                 const targetDiameter = diameter * 0.075;
-                const sourceDiameter = Math.max(size.x, size.y, size.z) || 1;
+                const sourceDiameter = Math.max(size.x, size.y) || 1;
                 model.scale.setScalar(targetDiameter / sourceDiameter);
-                model.position.sub(center.multiplyScalar(model.scale.x));
+                model.position.set(-center.x * model.scale.x, -center.y * model.scale.x, -center.z * model.scale.x);
                 model.rotation.x = 0;
                 hubcapGroup = model;
                 hubcapGroup.name = 'Blender_Photo_Reconstruction';
@@ -742,20 +698,46 @@
             if (![radius, bore, depth, thick, rimDepth].every(Number.isFinite)) return;
             const scale = .075, mat = materials[currentMaterialType], accent = accentMaterial;
             const vec = (r,a,z) => new THREE.Vector3(r*scale*Math.cos(a), r*scale*Math.sin(a), z*scale);
+            const annulus = (outerRadius, innerRadius, z, height, material) => {
+                const shape = new THREE.Shape();
+                const hole = new THREE.Path();
+                shape.absarc(0, 0, outerRadius * scale, 0, Math.PI * 2, false);
+                hole.absarc(0, 0, innerRadius * scale, 0, Math.PI * 2, true);
+                shape.holes.push(hole);
+                const geometry = new THREE.ExtrudeGeometry(shape, {
+                    depth: Math.max(1.5, height) * scale,
+                    bevelEnabled: true,
+                    bevelSegments: 2,
+                    bevelSize: .08,
+                    bevelThickness: .08,
+                });
+                const object = new THREE.Mesh(geometry, material);
+                object.position.z = z * scale;
+                hubcapGroup.add(object);
+            };
             const bar = (a,b,width,height,material=mat) => {
                 const mid=a.clone().add(b).multiplyScalar(.5), len=a.distanceTo(b), sh=new THREE.Shape(), half=Math.max(1.5,width)*scale/2;
                 sh.moveTo(-len/2,-half); sh.lineTo(len/2,-half*.72); sh.lineTo(len/2,half*.72); sh.lineTo(-len/2,half); sh.closePath();
                 const geo=new THREE.ExtrudeGeometry(sh,{depth:Math.max(2,height)*scale,bevelEnabled:true,bevelSegments:2,bevelSize:.05,bevelThickness:.05});
                 const o=new THREE.Mesh(geo,material); o.position.copy(mid); o.rotation.z=Math.atan2(b.y-a.y,b.x-a.x); hubcapGroup.add(o);
             };
+            // Keep the centre support compact. A full-radius face disc here
+            // hides the spoke design, so the structural web stops at the
+            // outer edge of the arms and leaves the intended openings visible.
+            const flangeRadius = Math.max(bore*.78, radius*.19);
+            annulus(Math.max(flangeRadius * 1.35, radius*.34), Math.max(bore*.46, radius*.105), depth*.31, Math.max(thick*1.55, radius*.045), mat);
+            const flange = new THREE.Mesh(new THREE.CylinderGeometry(flangeRadius*scale, flangeRadius*scale, Math.max(thick*1.8, 4)*scale, 64), mat);
+            flange.rotation.x = Math.PI / 2;
+            flange.position.z = depth * scale * .52;
+            hubcapGroup.add(flange);
             hubcapGroup.add(new THREE.Mesh(new THREE.TorusGeometry(radius*scale*.97,Math.max(1.5,thick)*scale,16,128),accent));
-            const inner=Math.max(bore*.68,radius*.2), outer=radius*.86, baseWidth=Math.max(4,radius*.075);
+            const inner=Math.max(bore*.38,radius*.115), outer=radius*.985, baseWidth=Math.max(8,radius*.105);
             profiles.forEach((profile,index) => {
                 const a=Number(profile.root_angle_deg)*Math.PI/180;
                 const mid=Number(profile.mid_offset_deg||0)*Math.PI/180;
                 const out=Number(profile.outer_offset_deg||0)*Math.PI/180;
                 const width=baseWidth*Number(profile.width_scale||1);
-                bar(vec(inner,a,depth*.45),vec(outer,a+out,depth*.45),width,thick, index%2===0 ? accent : mat);
+                bar(vec(inner,a,depth*.58),vec(outer,a+out,depth*.42),width,Math.max(thick*1.15, 3), index%2===0 ? accent : mat);
             });
             if (g.center_type === 'cap') {
                 const cap=new THREE.Mesh(new THREE.CylinderGeometry(Math.max(bore*.5,radius*.12)*scale,Math.max(bore*.5,radius*.12)*scale,Math.max(2,thick)*scale,64),mat);
@@ -899,9 +881,39 @@
             if (!file) return;
             const status = document.getElementById('upload-status');
             status.classList.remove('hidden');
-            status.textContent = file.name.toLowerCase().endsWith('.stl')
-                ? 'Файл выбран, но импорт геометрии пока не подключён. Требуется интеграция STLLoader.'
-                : 'Поддерживается только STL.';
+            const name = file.name.toLowerCase();
+            if (name.endsWith('.glb') || name.endsWith('.gltf')) {
+                if (!scene || !THREE.GLTFLoader) {
+                    status.textContent = 'GLTF-загрузчик недоступен.';
+                    return;
+                }
+                const objectUrl = URL.createObjectURL(file);
+                status.textContent = 'Загрузка GLB/GLTF в 3D-сцену…';
+                clearHubcapModel();
+                new THREE.GLTFLoader().load(objectUrl, gltf => {
+                    URL.revokeObjectURL(objectUrl);
+                    const model = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(model);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+                    const maxSize = Math.max(size.x, size.y, size.z) || 1;
+                    model.scale.setScalar((Number(scannedGeometry.outer_diameter_mm) * .075) / maxSize);
+                    model.position.sub(center.multiplyScalar(model.scale.x));
+                    model.rotation.x = 0;
+                    hubcapGroup = model;
+                    hubcapGroup.name = 'Imported_GLTF_Model';
+                    scene.add(hubcapGroup);
+                    if (stockWheelGroup) stockWheelGroup.visible = false;
+                    status.textContent = `Загружено: ${file.name}`;
+                }, undefined, error => {
+                    URL.revokeObjectURL(objectUrl);
+                    status.textContent = 'Не удалось открыть GLB/GLTF: ' + (error.message || 'ошибка файла');
+                });
+            } else if (name.endsWith('.stl') || name.endsWith('.obj')) {
+                status.textContent = `Файл выбран: ${file.name}. Для STL/OBJ требуется подключить соответствующий загрузчик.`;
+            } else {
+                status.textContent = 'Поддерживаются STL, OBJ, GLB и GLTF.';
+            }
             event.target.value = '';
         }
 
@@ -969,7 +981,7 @@
             box.append(warn, btn);
         }
 
-        function applyScanToModel(p) {
+        function applyScanToModel(p, rebuildPreview = true) {
             scannedGeometry = { ...scannedGeometry, ...p };
             geometryRatios = p.geometry_ratios || geometryRatios;
             applyingScan = true;
@@ -987,7 +999,7 @@
             }
             updateParameters();
             applyingScan = false;
-            buildWheelHubcap();
+            if (rebuildPreview) buildWheelHubcap();
             document.getElementById('ai-result')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
@@ -1077,7 +1089,7 @@
                 const modelParameters = data.geometry || data.parameters || {};
                 if (diam !== null && !isNum(modelParameters.outer_diameter_mm)) modelParameters.outer_diameter_mm = diam;
                 scannedGeometry = { ...scannedGeometry, ...modelParameters };
-                applyScanToModel(modelParameters);
+                applyScanToModel(modelParameters, !data.model?.url);
                 renderScanResult(data);
                 if (data.model?.url) loadGeneratedHubcap(data.model.url);
                 if (data.model?.url) {
@@ -1147,7 +1159,7 @@
 
         const $ = id => document.getElementById(id);
 
-        const METIZ_PARAM_META = { length:['Длина',1,500], diameter:['Наружный диаметр',.5,200], inner_diameter:['Внутренний диаметр',.2,199], hole_diameter:['Диаметр отверстия',.2,199], wall_thickness:['Толщина стенки',.2,50], width:['Ширина / под ключ',1,300], height:['Высота',.5,200], head_diameter:['Диаметр головки',1,200], head_height:['Высота головки',.5,100], wrench_size:['Размер под ключ',1,300], flange_diameter:['Диаметр буртика',1,250], flange_height:['Высота буртика',.5,100], thread_pitch:['Шаг резьбы',.2,10], thread_length:['Длина резьбы',1,500], holes_count:['Количество отверстий',1,32] };
+        const METIZ_PARAM_META = { length:['Длина',1,500], diameter:['Наружный диаметр',.5,200], inner_diameter:['Внутренний диаметр',.2,199], hole_diameter:['Диаметр отверстия',.2,199], wall_thickness:['Толщина стенки',.2,50], width:['Ширина / под ключ',1,300], height:['Высота',.5,200], head_diameter:['Диаметр головки',1,200], head_height:['Высота головки',.5,100], wrench_size:['Размер под ключ',1,300], flange_diameter:['Диаметр буртика',1,250], flange_height:['Высота буртика',.5,100], thread_pitch:['Шаг резьбы',.2,10], thread_length:['Длина резьбы',1,500], holes_count:['Количество отверстий',1,32], thread_standard:['Стандарт резьбы',0,0], nylon_height:['Высота нейлонового кольца',.5,30], cap_height:['Высота колпачка',1,50], slots_count:['Количество прорезей',2,16], slot_width:['Ширина прорези',.5,20], spring_gap:['Зазор пружинной шайбы',.2,10], teeth_count:['Количество зубьев',4,32], tooth_height:['Высота зуба',.2,20] };
         const METIZ_MATERIALS = {steel:'Сталь',stainless:'Нержавеющая сталь',zinc:'Оцинкованная сталь',brass:'Латунь',aluminum:'Алюминий',plastic:'Пластик'};
         let activeWorkspace='hubcaps', metizCatalog={fasteners:[],bushings:[],materials:{}}, metizProjects=[], metizMode='fasteners', metizFilter='all', metizSelected=null, metizParams={}, metizProjectId=null;
         const metizEsc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
@@ -1206,10 +1218,11 @@
             $('metiz-preview-title').textContent=metizSelected.name;
             $('metiz-model-message').textContent='Построение 3D-модели…'; $('metiz-model-download').classList.add('pointer-events-none','opacity-40'); $('metiz-model-download').setAttribute('aria-disabled','true');
             metizParams={...metizSelected.default,...(opts.params||{})}; metizProjectId=opts.projectId||null; $('metiz-editor-title').textContent=metizSelected.name;
+            if(metizParams.thread_pitch){const nearest=[['M3',3],['M4',4],['M5',5],['M6',6],['M8',8],['M10',10],['M12',12],['M14',14],['M16',16],['M20',20]].sort((a,b)=>Math.abs(a[1]-Number(metizParams.diameter))-Math.abs(b[1]-Number(metizParams.diameter)))[0];metizParams.thread_standard=opts.params?.thread_standard||nearest[0];}
             $('metiz-material').innerHTML=Object.entries(metizCatalog.materials||METIZ_MATERIALS).map(([k,v])=>`<option value="${metizEsc(k)}" ${k===(opts.material||'steel')?'selected':''}>${metizEsc(v)}</option>`).join('');
-            const groups={basic:['length','diameter','inner_diameter','hole_diameter','wall_thickness','height'],head:['head_diameter','head_height','width','wrench_size'],flange:['flange_diameter','flange_height'],thread:['thread_pitch','thread_length'],mount:['holes_count']};
-            $('metiz-params').innerHTML=Object.entries(groups).map(([group,keys])=>{const fields=keys.filter(k=>Object.prototype.hasOwnProperty.call(metizParams,k)&&METIZ_PARAM_META[k]);if(!fields.length)return '';const title={basic:'Основные размеры',head:'Головка / под ключ',flange:'Буртик',thread:'Резьба',mount:'Крепление'}[group];return `<div class="sm:col-span-2 lg:col-span-3 border border-slate-800 rounded-lg p-3"><h4 class="text-[10px] uppercase tracking-wider text-emerald-400 mb-2">${title}</h4><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${fields.map(k=>{const [label,min,max]=METIZ_PARAM_META[k];return `<label class="block text-xs text-slate-400">${label}<span class="block mt-1"><input data-metiz-param="${k}" type="number" min="${min}" max="${max}" step="${k==='holes_count'?1:.1}" value="${Number(metizParams[k])}" class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-100"></span></label>`;}).join('')}</div></div>`;}).join('');
-            $('metiz-editor').classList.remove('hidden'); $('metiz-editor').scrollIntoView({behavior:'smooth',block:'nearest'}); $('metiz-params').querySelectorAll('[data-metiz-param]').forEach(input=>input.addEventListener('input',()=>{metizParams[input.dataset.metizParam]=Number(input.value);validateMetizParams();})); validateMetizParams();
+            const groups={basic:['length','diameter','inner_diameter','hole_diameter','wall_thickness','height'],head:['head_diameter','head_height','width','wrench_size','nylon_height','cap_height'],flange:['flange_diameter','flange_height'],thread:['thread_standard','thread_pitch','thread_length'],mount:['holes_count','slots_count','slot_width','spring_gap','teeth_count','tooth_height']};
+            $('metiz-params').innerHTML=Object.entries(groups).map(([group,keys])=>{const fields=keys.filter(k=>Object.prototype.hasOwnProperty.call(metizParams,k)&&METIZ_PARAM_META[k]);if(!fields.length)return '';const title={basic:'Основные размеры',head:'Головка / под ключ',flange:'Буртик',thread:'Резьба',mount:'Крепление'}[group];return `<div class="sm:col-span-2 lg:col-span-3 border border-slate-800 rounded-lg p-3"><h4 class="text-[10px] uppercase tracking-wider text-emerald-400 mb-2">${title}</h4><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${fields.map(k=>{const [label,min,max]=METIZ_PARAM_META[k];const input=k==='thread_standard'?`<select data-metiz-param="${k}" class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-100">${['M3','M4','M5','M6','M8','M10','M12','M14','M16','M20'].map(v=>`<option value="${v}" ${metizParams[k]===v?'selected':''}>${v}</option>`).join('')}</select>`:`<input data-metiz-param="${k}" type="number" min="${min}" max="${max}" step="${k==='holes_count'?1:.1}" value="${Number(metizParams[k])}" class="w-full bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-100">`;return `<label class="block text-xs text-slate-400">${label}<span class="block mt-1">${input}</span></label>`;}).join('')}</div></div>`;}).join('');
+            $('metiz-editor').classList.remove('hidden'); $('metiz-editor').scrollIntoView({behavior:'smooth',block:'nearest'}); $('metiz-params').querySelectorAll('[data-metiz-param]').forEach(input=>input.addEventListener('input',()=>{metizParams[input.dataset.metizParam]=input.tagName==='SELECT'?input.value:Number(input.value);validateMetizParams();})); validateMetizParams();
             await buildMetizModel();
         }
 
