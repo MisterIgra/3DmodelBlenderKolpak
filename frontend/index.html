@@ -699,6 +699,33 @@
             if (renderer && scene && camera) renderer.render(scene, camera);
         }
 
+        function loadGeneratedHubcap(url) {
+            if (!scene || !THREE.GLTFLoader || !url) return;
+            const requestUrl = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+            clearHubcapModel();
+            const loader = new THREE.GLTFLoader();
+            loader.load(requestUrl, gltf => {
+                const model = gltf.scene;
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+                const diameter = Number(scannedGeometry.outer_diameter_mm) || 380;
+                const targetDiameter = diameter * 0.075;
+                const sourceDiameter = Math.max(size.x, size.y, size.z) || 1;
+                model.scale.setScalar(targetDiameter / sourceDiameter);
+                model.position.sub(center.multiplyScalar(model.scale.x));
+                model.rotation.x = 0;
+                hubcapGroup = model;
+                hubcapGroup.name = 'Blender_Photo_Reconstruction';
+                scene.add(hubcapGroup);
+                if (stockWheelGroup) stockWheelGroup.visible = false;
+                document.getElementById('scanner-log').innerText = '[Blender] Загружена новая цельная 3D-модель.';
+            }, undefined, error => {
+                document.getElementById('scanner-log').innerText = '[Blender] Не удалось загрузить GLB: ' + (error.message || 'ошибка загрузки');
+                buildWheelHubcap();
+            });
+        }
+
         function buildWheelHubcap() {
             if (!scene) return;
             clearHubcapModel();
@@ -1049,8 +1076,10 @@
                 log.innerText = '[AI] Параметры получены, строю 3D-модель…';
                 const modelParameters = data.geometry || data.parameters || {};
                 if (diam !== null && !isNum(modelParameters.outer_diameter_mm)) modelParameters.outer_diameter_mm = diam;
+                scannedGeometry = { ...scannedGeometry, ...modelParameters };
                 applyScanToModel(modelParameters);
                 renderScanResult(data);
+                if (data.model?.url) loadGeneratedHubcap(data.model.url);
                 if (data.model?.url) {
                     let link = document.getElementById('blender-model-link');
                     if (!link) {
