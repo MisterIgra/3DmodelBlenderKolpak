@@ -164,7 +164,9 @@ def _add_spokes(p, rng, radius, bore_r, face_mat, accent_mat):
     mid_ratio = float(p.get("spoke_mid_radius_ratio", 0.53))
     outer_ratio = float(p.get("spoke_outer_radius_ratio", 0.82))
     root_r = max(bore_r * 1.55, radius * 0.19)
-    outer_r = radius * max(0.76, min(0.89, outer_ratio))
+    # Extend the spoke tips into the inner barrel wall so the decorative face
+    # is mechanically supported by the rim rather than ending in mid-air.
+    outer_r = radius * max(0.89, min(0.955, outer_ratio + 0.065))
     mid_r = radius * max(0.40, min(0.70, mid_ratio))
     mid_r = max(root_r + radius * 0.09, min(mid_r, outer_r - radius * 0.10))
     thickness = max(0.0045, float(p["face_thickness_mm"]) / 1000.0)
@@ -233,6 +235,16 @@ def make_hubcap(p, rng):
            radius*0.021, accent, major_segments=128, minor_segments=16)
     _torus("Inner_Bead_Ring", radius*0.755, radius*0.010*lip_scale,
            radius*0.020, accent, major_segments=112, minor_segments=12)
+
+    # Continuous structural face behind the decorative spokes. Without this
+    # bridge, the photo-shaped spokes are separate floating solids between the
+    # hub and the barrel. It overlaps both neighbouring rings on purpose.
+    # Put the plate behind the lowest part of the spokes so the solids overlap
+    # through their thickness instead of merely touching at a single edge.
+    face_base = radius * 0.11 + bulge - face_thickness * 0.45
+    face_back = face_base - face_thickness
+    _annulus("Continuous_Face_Backplate", radius * 0.94, bore_r,
+             face_back, face_base, barrel_mat, segments=128)
 
     # Raised hub flange with an actual centre bore (or a separate centre cap).
     hub_outer = radius*0.305
